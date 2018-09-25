@@ -121,7 +121,8 @@ pairmemo.delete = function(f, filter = function(x) TRUE, verbose = T)
         file.remove(file.path(fe$directory, hash))
         if (fe$mem)
            {rm(list = hash, pos = fe$kcache)
-            rm(list = hash, pos = fe$vcache)}
+            if (exists(hash, fe$vcache))
+                rm(list = hash, pos = fe$vcache)}
         deleted = deleted + 1}
     if (verbose)
         message("Deleted ", deleted, " cache entr",
