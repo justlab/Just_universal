@@ -31,7 +31,6 @@ pairmemo = function(f, directory, mem = F, fst = F)
     # doesn't already exist.
     stopifnot(dir.exists(directory))
     directory = file.path(directory, f.name)
-    dir.create(directory, showWarnings = FALSE)
     if (mem)
       # The memory cache uses environments instead of lists so we
       # get pass-by-reference semantics. 
@@ -52,6 +51,7 @@ pairmemo = function(f, directory, mem = F, fst = F)
         else
           # It's a total cache miss, so actually call the function.
            {v = do.call(f, key$args)
+            dir.create(directory, showWarnings = FALSE)
             if (fst)
                 fst::write.fst(v, path)
             else
