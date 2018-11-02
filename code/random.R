@@ -13,3 +13,15 @@ make.seed.for.obj = function(x)
     seed = readBin(x, "int")
     close(x)
     seed}
+
+with.temp.seed = function(seeder, expr)
+  # Saves the RNG state, seeds the RNG with
+  # `set.seed.for.obj(seeder)`, evaluates the expression, restores
+  # the old RNG state, and returns the expression's value.
+   {if (!exists(".Random.seed"))
+        set.seed(NULL)
+    old.seed = .Random.seed
+    set.seed.with.obj(seeder)
+    v = force(expr)
+    .Random.seed <<- old.seed
+    v}
