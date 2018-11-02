@@ -1,6 +1,8 @@
-# https://stackoverflow.com/a/52787092
+set.seed.with.obj = function(x)
+    set.seed(make.seed.for.obj(x))
 
 make.seed.for.obj = function(x)
+  # https://stackoverflow.com/a/52787092
    {x = as.raw(as.hexmode(substring(
         digest::digest(x, algo = "xxhash32"),
         c(1, 3, 5, 7),
@@ -9,6 +11,3 @@ make.seed.for.obj = function(x)
     seed = readBin(x, "int")
     close(x)
     seed}
-
-set.seed.with.obj = function(x)
-    set.seed(make.seed.for.obj(x))
