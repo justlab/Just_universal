@@ -18,6 +18,7 @@ source(file.path(this.dir, "random.R"))
 xgboost.dart.cvtune = function(
         d, dv, ivs,
         n.rounds,
+        weight.v = NULL,
         objective = "reg:linear",
         eval_metric = "rmse",
         n.param.vectors = 50L,
@@ -30,8 +31,12 @@ xgboost.dart.cvtune = function(
 
     if (objective != "reg:linear" || eval_metric != "rmse")
         stop('Not yet implemented')
-    eval_metric_f = function(x, y)
-        sqrt(mean((x - y)^2))
+    eval_metric_f = function(x, y, weights = NULL)
+        sqrt(
+            if (is.null(weights))
+                mean((x - y)^2)
+            else
+                sum((x - y)^2 * weights) / sum(weights))
 
     pow2 = function(x) 2^x
     ps = makeParamSet(
@@ -70,6 +75,8 @@ xgboost.dart.cvtune = function(
                 params),
             data = as.matrix(dslice[, mget(ivs)]),
             label = dslice[[dv]],
+            weight = (if (is.null(weight.v)) NULL else
+                dslice[[weight.v]]),
             nrounds = n.rounds)
 
     if (is.null(folds))
@@ -91,7 +98,8 @@ xgboost.dart.cvtune = function(
             step <<- step + 1
             if (progress)
                 setTxtProgressBar(bar, step)}
-        eval_metric_f(preds$y, d[[dv]])}))
+        eval_metric_f(preds$y, d[[dv]],
+            (if (is.null(weight.v)) NULL else d[[weight.v]]))}))
 
     m = fit(d, design[best.design.i])
     if (progress)
@@ -100,7 +108,7 @@ xgboost.dart.cvtune = function(
     list(model = m, pred.fun = function(newdata)
         predict(m, newdata = as.matrix(newdata[, mget(ivs)]), ntreelimit = 1e6))}
 
-xgboost.dart.cvtune.example = function()
+xgboost.dart.cvtune.example = function(weighted = F)
    {xgb.threads = 10
 
     set.seed(5)
@@ -109,23 +117,30 @@ xgboost.dart.cvtune.example = function()
         x1 = rnorm(N),
         x2 = rnorm(N),
         x3 = rnorm(N)),
-        y = 2*x2 + (abs(x3) < 1) + rnorm(N))
+        y = 2*x2 + (abs(x3) < 1) + rnorm(N),
+        weight = ifelse(x3 < 0, 100, 1))
     train = (1 : N) <= 1000
 
     fit = xgboost.dart.cvtune(
         d = d[train],
         dv = "y", ivs = c("x1", "x2", "x3"),
+        weight.v = (if (weighted) "weight" else NULL),
         n.rounds = 10,
         progress = T,
         nthread = xgb.threads)
 
     rmse = function(x, y)
         sqrt(mean((x - y)^2))
-    message("Training RMSE: ", round(d = 3, rmse(
-        fit$pred.fun(d[train]),
-        d[train, y])))
-    message("Test RMSE: ", round(d = 3, rmse(
-        fit$pred.fun(d[!train]),
-        d[!train, y])))
+    evaluate = function(dslice)
+        round(d = 3, rmse(
+            fit$pred.fun(dslice),
+            dslice$y))
+
+    message("Training RMSE: ", evaluate(d[train]))
+    message("Test RMSE: ", evaluate(d[!train]))
+
+    if (weighted)
+       {message("Test RMSE on high-weighted: ", evaluate(d[!train & weight == 100]))
+        message("Test RMSE on low-weighted: ", evaluate(d[!train & weight == 1]))}
 
     invisible(fit)}
