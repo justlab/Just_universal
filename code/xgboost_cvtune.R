@@ -1,0 +1,131 @@
+# Fit XGBoost with DART to a dataset, using cross-validation to
+# select hyperparameters.
+#
+# n.rounds (the number of trees) is set manually rather than by
+# cross-validation because there can be a range of its values where
+# increasing it seems to slow down XGBoost a lot while only
+# improving performance a little bit.
+
+suppressPackageStartupMessages(
+   {library(data.table)
+    library(xgboost)
+    library(ParamHelpers)})
+
+this.dir = dirname(tail(n = 1, Filter(Negate(is.null),
+    lapply(sys.frames(), function(x) x$ofile)))[[1]])
+source(file.path(this.dir, "random.R"))
+
+xgboost.dart.cvtune = function(
+        d, dv, ivs,
+        n.rounds,
+        objective = "reg:linear",
+        eval_metric = "rmse",
+        n.param.vectors = 50L,
+        n.folds = 2L,  # Ignored if `folds` is set.
+        folds = NULL,
+        progress = F,
+        ...)
+
+   {xgboost.extra = list(...)
+
+    if (objective != "reg:linear" || eval_metric != "rmse")
+        stop('Not yet implemented')
+    eval_metric_f = function(x, y)
+        sqrt(mean((x - y)^2))
+
+    pow2 = function(x) 2^x
+    ps = makeParamSet(
+        # Based on autoxgboost's defaults.
+        makeNumericParam("eta", lower = .01, upper = .5),
+        makeNumericParam("gamma", lower = -7, upper = 6, trafo = pow2),
+        makeNumericParam("lambda", lower = -10, upper = 10, trafo = pow2),
+        makeNumericParam("alpha", lower = -10, upper = 10, trafo = pow2),
+        makeDiscreteParam("max_depth", values = c(3, 6, 9)),
+        makeNumericParam("subsample", lower = 0.5, upper = 1),
+        makeDiscreteParam("rate_drop", values = c(0, .01, .025, .05)))
+    design = as.data.table(
+        with.temp.seed(as.integer(n.param.vectors), generateDesign(
+            n.param.vectors, par.set = ps, trafo = T,
+            fun = lhs::maximinLHS)))
+    for (dcol in colnames(design))
+      {# Reverse the factorization of discrete parameters.
+       if (is.factor(design[[dcol]]))
+           design[, (dcol) := as.numeric(as.character(get(dcol)))]
+       # Round off the selected parameters to a few significant
+       # figures.
+       if (is.numeric(design[[dcol]]))
+           design[, (dcol) := signif(get(dcol), 2)]}
+    design = unique(design)
+
+    fit = function(dslice, params, fast = F)
+        xgboost(
+            verbose = 0,
+            params = c(
+                list(
+                    booster = "dart",
+                    objective = objective,
+                    eval_metric = eval_metric,
+                    one_drop = T),
+                xgboost.extra,
+                params),
+            data = as.matrix(dslice[, mget(ivs)]),
+            label = dslice[[dv]],
+            nrounds = n.rounds)
+
+    if (is.null(folds))
+        folds = sample(rep(1 : n.folds, len = nrow(d)))
+    if (progress)
+       {bar.steps = nrow(design) * length(unique(folds)) + 1
+        bar = txtProgressBar(min = 0, max = bar.steps, style = 3)}
+
+    step = 0
+    best.design.i = which.min(lapply(1 : nrow(design), function(design.i)
+       {preds = data.table(y = rep(NA_real_, nrow(d)))
+        for (fold.i in sort(unique(folds)))
+           {m = fit(d[folds != fold.i], design[design.i], fast = T)
+            preds[
+                folds == fold.i,
+                y := predict(m,
+                    newdata = as.matrix(d[folds == fold.i, mget(ivs)]),
+                    ntreelimit = 1e6)]
+            step <<- step + 1
+            if (progress)
+                setTxtProgressBar(bar, step)}
+        eval_metric_f(preds$y, d[[dv]])}))
+
+    m = fit(d, design[best.design.i])
+    if (progress)
+       {setTxtProgressBar(bar, bar.steps)
+        close(bar)}
+    list(model = m, pred.fun = function(newdata)
+        predict(m, newdata = as.matrix(newdata[, mget(ivs)]), ntreelimit = 1e6))}
+
+xgboost.dart.cvtune.example = function()
+   {xgb.threads = 10
+
+    set.seed(5)
+    N = 2000
+    d = transform(data.table(
+        x1 = rnorm(N),
+        x2 = rnorm(N),
+        x3 = rnorm(N)),
+        y = 2*x2 + (abs(x3) < 1) + rnorm(N))
+    train = (1 : N) <= 1000
+
+    fit = xgboost.dart.cvtune(
+        d = d[train],
+        dv = "y", ivs = c("x1", "x2", "x3"),
+        n.rounds = 10,
+        progress = T,
+        nthread = xgb.threads)
+
+    rmse = function(x, y)
+        sqrt(mean((x - y)^2))
+    message("Training RMSE: ", round(d = 3, rmse(
+        fit$pred.fun(d[train]),
+        d[train, y])))
+    message("Test RMSE: ", round(d = 3, rmse(
+        fit$pred.fun(d[!train]),
+        d[!train, y])))
+
+    invisible(fit)}
