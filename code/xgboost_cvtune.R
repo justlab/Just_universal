@@ -46,7 +46,6 @@ xgboost.dart.cvtune = function(
         makeNumericParam("lambda", lower = -10, upper = 10, trafo = pow2),
         makeNumericParam("alpha", lower = -10, upper = 10, trafo = pow2),
         makeDiscreteParam("max_depth", values = c(3, 6, 9)),
-        makeNumericParam("subsample", lower = 0.5, upper = 1),
         makeDiscreteParam("rate_drop", values = c(0, .01, .025, .05)))
     design = as.data.table(
         with.temp.seed(as.integer(n.param.vectors), generateDesign(
