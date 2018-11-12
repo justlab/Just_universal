@@ -104,8 +104,11 @@ xgboost.dart.cvtune = function(
     if (progress)
        {setTxtProgressBar(bar, bar.steps)
         close(bar)}
-    list(model = m, pred.fun = function(newdata)
-        predict(m, newdata = as.matrix(newdata[, mget(ivs)]), ntreelimit = 1e6))}
+    list(model = m, pred.fun = function(newdata, ...)
+        predict(m,
+            newdata = as.matrix(newdata[, mget(ivs)]),
+            ntreelimit = 1e6,
+            ...))}
 
 xgboost.dart.cvtune.example = function(weighted = F)
    {xgb.threads = 10
