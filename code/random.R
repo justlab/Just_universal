@@ -21,7 +21,8 @@ with.temp.seed = function(seeder, expr)
    {if (!exists(".Random.seed"))
         set.seed(NULL)
     old.seed = .Random.seed
-    set.seed.with.obj(seeder)
-    v = force(expr)
-    .Random.seed <<- old.seed
+    tryCatch(
+       {set.seed.with.obj(seeder)
+           v = force(expr)},
+       finally = {.Random.seed <<- old.seed})
     v}
