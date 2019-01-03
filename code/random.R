@@ -3,7 +3,7 @@ set.seed.with.obj = function(x)
 
 make.seed.for.obj = function(x)
   # https://stackoverflow.com/a/52787092
-   {if (is.integer(x))
+   {if (is.integer(x) && length(x) == 1)
         return(x)
     x = as.raw(as.hexmode(substring(
         digest::digest(x, algo = "xxhash32"),
