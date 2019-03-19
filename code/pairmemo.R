@@ -74,7 +74,7 @@ pairmemo.list = function(f, filter = function(x) TRUE)
   # Retrieve the JSON metadata of all saved calls of this function.
   # The result is a list with hashes as names.
   #
-  # This function is used internally by `pairmemo.get` and `pairmemo.remove`,
+  # This function is used internally by `pairmemo.get` and `pairmemo.delete`,
   # but is also useful for checking that the filter you intend to use
   # for one of those functions is correct.
    {fe = environment(f)
