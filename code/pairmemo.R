@@ -1,6 +1,7 @@
-library(jsonlite)
-library(digest)
-library(tools)
+suppressPackageStartupMessages(
+   {library(jsonlite)
+    library(digest)
+    library(tools)})
 
 options(fst_threads = 1)  # Avoid a multithreading bug.
 
