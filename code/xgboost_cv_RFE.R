@@ -388,8 +388,6 @@ report.r.squared <- function(dataXY, nround = 2){
 #' @return ggplot2 object
 #' @export plot.rmse.summary.simple
 plot.rmse.summary.simple <- function(rmse_rfe = rferesults$rmse_rfe){
-  require(ggplot2)
-  require(plotly)
   rmse_rfe_dt <- data.table(x = 1:length(rmse_rfe),
                             y = rmse_rfe)
   n_min <- which.min(rmse_rfe)
