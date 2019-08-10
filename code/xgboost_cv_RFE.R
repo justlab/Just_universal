@@ -1,12 +1,12 @@
-# Selected reuseable functions from CWV paper, revised.
-# Contains:
-# * wrapped CV functions
-# * some results-reporting functions using output from CV
-# if needed,
+# wrapped CV functions
+# Selected reuseable functions from CWV paper. Some functions have been
+# further revised
 # Auther info. into the Description:
 # person(given = "Yang", family = "Liu", role = c("aut"), email = "lyhello@gmail.com", comment = c(ORCID = "0000-0001-6557-6439"))
 #
 #
+
+
 
 # Version 3 CV with RFE -------------------------------------------------------------
 # 19.4, a better version that seperates the rfe process
@@ -17,8 +17,12 @@
 #' Version 3 CV with RFE (recursive feature selection using SHAP),
 #' use random search by `xgboost.dart.cvtune`.
 #'
+#'
+#' @importFrom stats as.formula cor lm na.omit predict var
 #' @import xgboost
 #' @import data.table
+#' @import here
+#'
 #'
 #' @param modeldt1 the dataset
 #' @param sat Name of the satellite, just for labelling purpose, for example "terra"
@@ -81,7 +85,7 @@ run.k.fold.cv.rfe.wrap <- function(
   y_formula <- as.formula(paste(y_var, "~."))
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
   y_var_pred_whole <- paste0(y_var, "_pred_whole") # name of the predicted y
-
+  
   # divide data by folders and get list of index
   time0 <- Sys.time()
   temp <- prepare.bin(modeldt1, by = by, k_fold = k_fold)
@@ -92,13 +96,13 @@ run.k.fold.cv.rfe.wrap <- function(
     stn = function(x, bin_list)modeldt1[stn%in%bin_list[[x]], which = TRUE],
     day = function(x, bin_list)modeldt1[dayint%in%bin_list[[x]], which = TRUE]
   )
-
+  
   index_train <- index_test <- list()
   for (k in 1:k_fold){
     index_test[[k]] <- index.fs.list[[by]](k, bin_list)
     index_train[[k]] <- -index_test[[k]]
   }
-
+  
   # run k-fold cv and record SHAP matrix, predicted value, overall rmse...
   dataXY0 <- modeldt1[,..features0]
   message("Run k-fold cv \n")
@@ -108,10 +112,13 @@ run.k.fold.cv.rfe.wrap <- function(
                               xgb_threads = xgb_threads)
   # write param list to global environment
   # so in rfe process there is no need to run param search
-  xgb_param_list_full <<- cv_results$xgb_param_list2
+  xgb_param_list_full <- cv_results$xgb_param_list2
+  # save to drive instead of using <<- to send to global. Not recommended in funcs.
+  if (!dir.exists(here("Intermediate"))) dir.create(here("Intermediate"))
+  saveRDS(xgb_param_list_full, here("Intermediate", "xgb_param_list_full.rds"))
   cv_results_full_model <- cv_results
   modeldt1 <-  cbind(modeldt1, cv_results$y_pred_dt)
-
+  
   ## RFE part
   if (run_rfe){
     message("Run RFE \n")
@@ -119,7 +126,7 @@ run.k.fold.cv.rfe.wrap <- function(
     features_rank_rfe <- rep(NA_character_, n_features)
     features_rank_rfe_record <- list()
     rmse_rfe <- rep(NA_real_, n_features)
-
+    
     for (nf in (n_features):1){
       features_rank_rfe_record[[nf]] <- cv_results$features_rank_full_model # save all the features
       cat("nf = ",nf, 'features ranked for',sat, 'are\n', features_rank_rfe_record[[nf]], '\n')
@@ -141,7 +148,7 @@ run.k.fold.cv.rfe.wrap <- function(
     rfe_output <- list(features_rank_rfe = features_rank_rfe,
                        features_rank_rfe_record = features_rank_rfe_record,
                        rmse_rfe = rmse_rfe)
-
+    
     ## predict whole data
     if (predict_whole_model){
       # select by number of features from rfe
@@ -161,11 +168,11 @@ run.k.fold.cv.rfe.wrap <- function(
     }
   }
   time_spent <- Sys.time() - time0
-
+  
   # output
   general_output <- list(sat = sat, by=by, time_spent = time_spent,
                          bin_list = bin_list, modeldt1_wPred = modeldt1)
-
+  
   if (run_rfe) {
     return(c(general_output, cv_results_full_model, rfe_output))
   } else {
@@ -191,8 +198,8 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
   # prepare dataset
   n_row <- nrow(data_X)
   n_col <- ncol(data_X)
-
-
+  
+  
   # output dataset
   y_pred_dt <- data.table(y_pred = rep(NA_real_, n_row))
   shap_score <- as.data.table(matrix(rep(NA_real_,n_row*n_col),ncol = n_col))
@@ -200,7 +207,7 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
   xgb_param_list1 <- xgb_param_list2 <- list()
   BIAS0 <- rep(NA_real_, k_fold)
   # loop for each fold
-
+  
   set.seed(1234)
   for (i in 1:k_fold){
     cat('number of obs in testing fold', i, 'is:', nrow(data_X[index_test[[i]],]), '\n')
@@ -217,14 +224,15 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
       #
       # autoincv1 <- run.autoxgboost.dart(traindt = dataXY_df[index_train[[i]],], target = y_var, simple = T)
       # xgb_param_dart <- mlr::getHyperPars(autoincv1$final.learner)
-
+      
       # fit model
       y_pred_dt[index_test[[i]], y_pred:= rsxgb0$pred.fun(dataXY_df[index_test[[i]],])] # record the predicted cwv_diff
       # predicted SHAP
       shap_pred <- as.data.table(rsxgb0$pred.fun(dataXY_df[index_test[[i]],],
                                                  predcontrib = TRUE, approxcontrib = FALSE))
     } else {
-      # use param to fit the model (old way)
+      # use already obtained param to fit the model (old way)
+      xgb_param_list_full <- readRDS(here("Intermediate", "xgb_param_list_full.rds"))
       xgb_param_dart <- xgb_param_list_full[[paste0(by, i)]]
       train_mm <- as.matrix(data_X[index_train[[i]],])
       test_mm <- as.matrix(data_X[index_test[[i]],]) # features do not contain Y variable
@@ -236,11 +244,11 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
       shap_pred <- as.data.table(predict(xgbmod, test_mm ,predcontrib = TRUE, approxcontrib = FALSE,
                                          ntreelimit = xgb_param_dart$nrounds))
     }
-
+    
     BIAS0[i] <- first(shap_pred$BIAS)
     shap_pred[, BIAS := NULL]
     shap_score[index_test[[i]],] <- shap_pred # record the SHAP values (for whole model)
-
+    
     xgb_param_list1[[paste0(by, i)]] <- unlist(xgb_param_dart)
     xgb_param_list2[[paste0(by, i)]] <- xgb_param_dart
   }
@@ -258,11 +266,6 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
               xgb_param_list1 = xgb_param_list1,
               xgb_param_list2 = xgb_param_list2))
 }
-
-# examples
-# cv_results <- run.k.fold.cv(sat = sat, k_fold=k_fold, run_param_cv = T,
-#                             dataXY_df = dataXY0, by = by, y_var = y_var,
-#                             index_train = index_train[[1]], index_test = index_test[[1]])
 
 
 #' internal function to get threads to use
@@ -283,7 +286,7 @@ get.threads <- function(){
 #' @importFrom  xgboost xgboost
 #' @return xgboost model object
 #'
-rfe.fit <- function(X, Y, xgb_param, verbose = FALSE){
+rfe.fit <- function(X, Y, xgb_param){
   if (!is.null(xgb_param$seed)) set.seed(xgb_param$seed) else set.seed(1234)
   xgbmod <- xgboost(data = as.matrix(X),
                     label = as.matrix(Y),
@@ -315,15 +318,15 @@ prepare.bin <- function(modeldt1, by, k_fold){
   ## use helper.pack.bins is better
   ss$bin_stn <- helper.pack.bins(ss[, group_count], k_fold)
   bin_list <- split(ss[[by_var]], ss$bin_stn)
-
+  
   setkeyv(modeldt1, by_var)
   setkeyv(ss, by_var)
   modeldt1 <- modeldt1[ss, on = by_var]
   modeldt1$bin_stn <- as.factor(modeldt1$bin_stn)
-
+  
   message('Obs in each stn_bin and total obs:')
   print(ss[, sum(group_count), by = bin_stn])
-
+  
   return(list(data = modeldt1, bin = bin_list))
 }
 
@@ -360,7 +363,7 @@ helper.pack.bins = function(object.sizes, n.bins){
 # Some corresponding functions to generate output -------------------------
 
 #' report R squared
-#' @param data the dataset, modeldt1_wPred from the model above
+#' @param dataXY the dataset, modeldt1_wPred from the model above
 #' @param nround round the results
 #'
 #' @export report.r.squared
@@ -372,11 +375,11 @@ report.r.squared <- function(dataXY, nround = 2){
   rmse_pcnt <- rmse / sqrt(mean((dataXY[[y_var]])^2))
   print(paste('N =', dataXY[,.N],', RMSE reduced from',
               round(sqrt(mean((dataXY[[y_var]])^2)),4),
-      'to', round(rmse,4), "(", round(rmse_pcnt*100, nround), "%),\n",
-      'Traditional R2=', round(R2*100,nround),'%; '))
+              'to', round(rmse,4), "(", round(rmse_pcnt*100, nround), "%),\n",
+              'Traditional R2=', round(R2*100,nround),'%; '))
   print(paste('Pearson R2 between y_var_pred and y_var is',
-      round(cor(dataXY[[y_var]], dataXY[[y_var_pred]])^2*100, nround),
-      '%\n'))
+              round(cor(dataXY[[y_var]], dataXY[[y_var_pred]])^2*100, nround),
+              '%\n'))
   print(paste("Pearson r = ",round(cor(dataXY[[y_var]], dataXY[[y_var_pred]]),
                                    nround+2), '\n'))
 }
@@ -386,8 +389,8 @@ report.r.squared <- function(dataXY, nround = 2){
 #' updated on (19.04.06). only one line is plotted.
 #' @param rmse_rfe use rferesults$rmse_rfe
 #' @return ggplot2 object
-#' @export plot.rmse.summary.simple
-plot.rmse.summary.simple <- function(rmse_rfe = rferesults$rmse_rfe){
+#' @export rfe.rmse.plot
+rfe.rmse.plot <- function(rmse_rfe = rferesults$rmse_rfe){
   rmse_rfe_dt <- data.table(x = 1:length(rmse_rfe),
                             y = rmse_rfe)
   n_min <- which.min(rmse_rfe)
@@ -398,4 +401,19 @@ plot.rmse.summary.simple <- function(rmse_rfe = rferesults$rmse_rfe){
          y = "Testing rmse from all folds of CV", color = "", group = "") +
     geom_vline(xintercept = n_min, size = 0.3, linetype = 2) +
     theme_bw()
+}
+
+
+
+if(getRversion() >= "2.15.1")  {
+  utils::globalVariables(c(".","oi","bin","size","aeronetdt",
+                           "sat","long","group","group_count",
+                           "bin_stn","y_var","y_var_pred",
+                           "xgb_threads", "rferesults", "x", "y","..yvar",
+                           "n_rounds", "y_pred",
+                           "xgb_param_list_full", "BIAS", "dayint", "stn",
+                           "..features0", "..y_var",
+                           "xgboost.dart.cvtune",
+                           "..features_updated_Y", "xgboost.dart.cvtune"
+  ))
 }
