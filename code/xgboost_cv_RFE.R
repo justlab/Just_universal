@@ -1,10 +1,11 @@
-# wrapped CV functions
-# Selected reuseable functions from CWV paper. Some functions have been
-# further revised
-# Auther info. into the Description:
-# person(given = "Yang", family = "Liu", role = c("aut"), email = "lyhello@gmail.com", comment = c(ORCID = "0000-0001-6557-6439"))
+# wrapped CV functions by station or day, including RFE
 #
+# Selected functions from CWV paper to run cv with RFE. Some functions have been
+# further improved compared to the CWV paper
 #
+# Auther info. into the Description: person(given = "Yang", family = "Liu", role = c("aut"), email = "lyhello@gmail.com", comment = c(ORCID = "0000-0001-6557-6439"))
+#
+# 
 
 
 
@@ -25,9 +26,9 @@
 #'
 #'
 #' @param modeldt1 the dataset
-#' @param sat Name of the satellite, just for labelling purpose, for example "terra"
+#' @param sat Name of the satellite, just for labelling purpose, for example "terra", or just "".
 #' @param y_var the y variables, for example y_var = "AOD_diff"
-#' @param features0 the features to use
+#' @param features0 the features to use, can incl. y_var or excl. y_var
 #' @param k_fold default to 5 k_fold cross-validation
 #' @param stn_var the variable presenting stations if cv by stn
 #' @param day_var the variable presenting dayint if cv by day,
@@ -104,6 +105,7 @@ run.k.fold.cv.rfe.wrap <- function(
   }
   
   # run k-fold cv and record SHAP matrix, predicted value, overall rmse...
+  if (!y_var%in%features0) features0 <- c(features0, y_var) 
   dataXY0 <- modeldt1[,..features0]
   message("Run k-fold cv \n")
   cv_results <- run.k.fold.cv(sat = sat, k_fold=k_fold, run_param_cv = run_param_cv,
@@ -188,10 +190,11 @@ run.k.fold.cv.rfe.wrap <- function(
 #' @param index_train index for training
 #' @param index_test index for testing
 #' @param xgb_threads xgb_threads passed from parent function
+#' @param by sting of "stn" or "day" passed from parent function 
 #' @param ... other arguments
 #'
 run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
-                          index_train, index_test, xgb_threads, ...){
+                          index_train, index_test, xgb_threads, by, ...){
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
   Y <-  dataXY_df[,..y_var]
   data_X <- dataXY_df[, -..y_var]
@@ -236,7 +239,8 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
       xgb_param_dart <- xgb_param_list_full[[paste0(by, i)]]
       train_mm <- as.matrix(data_X[index_train[[i]],])
       test_mm <- as.matrix(data_X[index_test[[i]],]) # features do not contain Y variable
-      xgbmod <- rfe.fit(X = train_mm, Y = as.matrix(Y[index_train[[i]],..y_var]), xgb_param = xgb_param_dart)
+      xgbmod <- rfe.fit(X = train_mm, Y = as.matrix(Y[index_train[[i]],..y_var]), 
+                        xgb_param = xgb_param_dart)
       # predicted y
       y_pred_dt[index_test[[i]], y_pred:= predict(xgbmod, test_mm,
                                                   ntreelimit = xgb_param_dart$nrounds)]
@@ -288,6 +292,8 @@ get.threads <- function(){
 #'
 rfe.fit <- function(X, Y, xgb_param){
   if (!is.null(xgb_param$seed)) set.seed(xgb_param$seed) else set.seed(1234)
+  xgb_threads <- get.threads()
+  # message(paste("xgb_param is", unlist(xgb_param)))
   xgbmod <- xgboost(data = as.matrix(X),
                     label = as.matrix(Y),
                     params = xgb_param,
