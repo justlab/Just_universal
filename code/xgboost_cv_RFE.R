@@ -379,28 +379,35 @@ report.r.squared <- function(dataXY, nround = 2){
   R2 <- 1- SSE0/(var(dataXY[[y_var]])*(dataXY[,.N]-1))
   rmse <-  sqrt(mean((dataXY[[y_var_pred]] - dataXY[[y_var]])^2))
   rmse_pcnt <- rmse / sqrt(mean((dataXY[[y_var]])^2))
-  print(paste('N =', dataXY[,.N],', RMSE reduced from',
-              round(sqrt(mean((dataXY[[y_var]])^2)),4),
-              'to', round(rmse,4), "(", round(rmse_pcnt*100, nround), "%),\n",
-              'Traditional R2=', round(R2*100,nround),'%; '))
-  print(paste('Pearson R2 between y_var_pred and y_var is',
-              round(cor(dataXY[[y_var]], dataXY[[y_var_pred]])^2*100, nround),
-              '%\n'))
-  print(paste("Pearson r = ",round(cor(dataXY[[y_var]], dataXY[[y_var_pred]]),
-                                   nround+2), '\n'))
+  s <-  paste('N =', dataXY[,.N],', RMSE reduced from',
+            round(sqrt(mean((dataXY[[y_var]])^2)),4),
+            'to', round(rmse,4), "(", round(rmse_pcnt*100, nround), "%),", "\n",
+            
+            'Traditional R2: 1-SSE/(SST(n-1)) =', round(R2*100,nround),'%;', "\n",
+            
+            'Pearson R2 between y_var_pred and y_var is',
+            round(cor(dataXY[[y_var]], dataXY[[y_var_pred]])^2*100, nround),
+            '%;', "\n",
+            
+            "Pearson r = ",round(cor(dataXY[[y_var]], dataXY[[y_var_pred]]),
+                                 nround+2), '.')
+  print(s)
+  return(s)
 }
 
 
 #' Show RFE results: make plots of rmse for new RFE.
 #' updated on (19.04.06). only one line is plotted.
 #' @param rmse_rfe use rferesults$rmse_rfe
+#' @import ggplot2
+#' 
 #' @return ggplot2 object
 #' @export rfe.rmse.plot
 rfe.rmse.plot <- function(rmse_rfe = rferesults$rmse_rfe){
   rmse_rfe_dt <- data.table(x = 1:length(rmse_rfe),
                             y = rmse_rfe)
   n_min <- which.min(rmse_rfe)
-  ggplot(data = rmse_rfe_dt, aes(x=x, y=y)) +
+  ggplot2::ggplot(data = rmse_rfe_dt, aes(x=x, y=y)) +
     geom_point() +
     geom_line(size = 0.5) +
     labs(x = "Number of Features",
