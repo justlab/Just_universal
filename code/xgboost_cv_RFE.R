@@ -30,6 +30,7 @@
 #' @param y_var the y variables, for example y_var = "AOD_diff"
 #' @param features0 the features to use, can incl. y_var or excl. y_var
 #' @param k_fold default to 5 k_fold cross-validation
+#' @param n_rounds0 default to 100, could set to lower for fast testing
 #' @param stn_var the variable presenting stations if cv by stn
 #' @param day_var the variable presenting dayint if cv by day,
 #' if provide both, will run cv by station. day_var should be date, or int.
@@ -64,6 +65,7 @@ run.k.fold.cv.rfe.wrap <- function(
   y_var,
   features0,
   k_fold = 5,
+  n_rounds0 = 100,
   stn_var = NULL,
   day_var = NULL,
   run_param_cv = T,
@@ -156,7 +158,7 @@ run.k.fold.cv.rfe.wrap <- function(
       # select by number of features from rfe
       var_selected <- features_rank_rfe[1: which.min(rmse_rfe)]
       rsxgb_whole <- xgboost.dart.cvtune(
-        n.rounds = if (exists("n_rounds")) n_rounds else 100,
+        n.rounds = n_rounds0,
         d = modeldt1, dv = y_var, ivs = var_selected,
         progress = T, nthread = xgb_threads)
       xgb_param_dart <- rsxgb_whole$model$params
@@ -194,7 +196,7 @@ run.k.fold.cv.rfe.wrap <- function(
 #' @param ... other arguments
 #'
 run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
-                          index_train, index_test, xgb_threads, by, ...){
+                          index_train, index_test, xgb_threads, by, n_rounds0, ...){
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
   Y <-  dataXY_df[,..y_var]
   data_X <- dataXY_df[, -..y_var]
@@ -218,7 +220,7 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
     if (run_param_cv){
       rsxgb0 <- xgboost.dart.cvtune(
         # by default, gives 100 rounds, and it is enough by experience
-        n.rounds = if (exists("n_rounds")) n_rounds else 100,
+        n.rounds = n_rounds0,
         d = dataXY_df[index_train[[i]],], dv = y_var, ivs = colnames(data_X),
         progress = T, nthread = xgb_threads)
       # manually select and store some params
@@ -423,7 +425,7 @@ if(getRversion() >= "2.15.1")  {
                            "sat","long","group","group_count",
                            "bin_stn","y_var","y_var_pred",
                            "xgb_threads", "rferesults", "x", "y","..yvar",
-                           "n_rounds", "y_pred",
+                            "y_pred",
                            "xgb_param_list_full", "BIAS", "dayint", "stn",
                            "..features0", "..y_var",
                            "xgboost.dart.cvtune",
