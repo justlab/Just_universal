@@ -24,7 +24,7 @@
 #' @import here
 #'
 #'
-#' @param modeldt1 the dataset
+#' @param data the dataset
 #' @param sat Name of the satellite, just for labelling purpose, for example "terra", or just "".
 #' @param y_var the y variables, for example y_var = "AOD_diff"
 #' @param features0 the features to use, can incl. y_var or excl. y_var
@@ -59,7 +59,7 @@
 #' not based on RFE
 #'
 run.k.fold.cv.rfe.wrap <- function(
-  modeldt1,
+  data,
   sat,
   y_var,
   features0,
@@ -73,6 +73,8 @@ run.k.fold.cv.rfe.wrap <- function(
 )
 {
   xgb_threads <- get.threads()
+  
+  modeldt1 <- data.table::copy(setDT(data))
   if(!is.null(day_var)) {
     modeldt1[,dayint := as.integer(get(day_var))]
     by = "day"
