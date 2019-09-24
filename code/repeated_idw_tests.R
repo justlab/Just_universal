@@ -79,7 +79,7 @@ tests = function()
                 li = locations$bi,
                 time = tim))),
             observations[, .(li, time)]))
-        observations[is.na(value), value :=
+        observations[is.na(value), value.hidden :=
             location.effect[li] + time.effect[time] + rnorm(.N)]
         observations[, li := match(li, locations$bi)]
 
@@ -118,6 +118,7 @@ tests = function()
                     maxdist = maxdist,
                     debug.level = 0)[, "var1.pred"]}]}))
 
+        observations[!is.na(value.hidden), value := value.hidden]
         observations[,
            {message("Greatest absolute difference: ",
                 signif(d = 3, max(abs(pred.our - pred.gstat))))
