@@ -13,9 +13,14 @@ tests = function()
     obs.points = sort(sample.int(nrow(basegrid), 3000))
     location.effect = basegrid[, 2*x + y^2]
     times = 1 : 25
+    lonely.time = length(times)
     time.effect = rnorm(length(times), sd = 5)
     observations = rbindlist(lapply(times, function(tim) data.table(
-        li = sample(obs.points, round(.7 * length(obs.points))),
+        li = sample(obs.points,
+          # Provide only observation for one timepoint, but a bunch
+          # of observations for all the others.
+          if (tim == lonely.time) 1 else
+              round(.7 * length(obs.points))),
         time = tim)))
     setkey(observations, time, li)
     observations[, value :=
@@ -29,6 +34,7 @@ tests = function()
         locs = basegrid[obs.points]
         fold = sample(rep(1 : 10, len = nrow(locs)))
         observations = copy(observations)
+        fallback = mean(observations$value)
 
         message("Building repeated.idw tables")
         f = repeated.idw(
@@ -41,7 +47,8 @@ tests = function()
         print(system.time(observations[, pred.our := f(
             li = oi,
             group = time,
-            outcome = value)]))
+            outcome = value,
+            fallback = fallback)]))
 
         message("gstat::idw")
         suppressPackageStartupMessages(library(gstat))
@@ -51,13 +58,15 @@ tests = function()
             by = .(this.time = time, this.fold = fold),
             pred.gstat :=
                {train = observations[time == this.time & fold != this.fold]
-                idw(
+                if (nrow(train)) idw(
                     formula = value ~ 1,
                     locations = ~ x + y,
                     data = train,
                     newdata = .SD,
                     maxdist = maxdist,
-                    debug.level = 0)[, "var1.pred"]}]}))
+                    debug.level = 0)[, "var1.pred"]
+                else
+                    fallback}]}))
 
         observations[,
            {message("Greatest absolute difference: ",
@@ -74,11 +83,15 @@ tests = function()
         fold = rep(-1, nrow(locations))
         fold[locations$bi %in% obs.points] =
             sample(rep(1 : 10, len = length(obs.points)))
+        fallback = mean(observations$value)
         observations = rbind(fill = T, observations, fsetdiff(
             rbindlist(lapply(times, function(tim) data.table(
                 li = locations$bi,
                 time = tim))),
             observations[, .(li, time)]))
+        # Don't provide *any* training data at the lonely time.
+        # This will test extrapolation with no available training data.
+        observations[time == lonely.time, value := NA_real_]
         observations[is.na(value), value.hidden :=
             location.effect[li] + time.effect[time] + rnorm(.N)]
         observations[, li := match(li, locations$bi)]
@@ -95,7 +108,8 @@ tests = function()
         print(system.time(observations[, pred.our := f(
             li = li,
             group = time,
-            outcome = value)]))
+            outcome = value,
+            fallback = fallback)]))
 
         message("gstat::idw")
         suppressPackageStartupMessages(library(gstat))
@@ -109,14 +123,15 @@ tests = function()
                     fold != this.fold &
                     fold != -1 &
                     !is.na(value)]
-                stopifnot(nrow(train) > 0)
-                idw(
+                if (nrow(train)) idw(
                     formula = value ~ 1,
                     locations = ~ x + y,
                     data = train,
                     newdata = .SD,
                     maxdist = maxdist,
-                    debug.level = 0)[, "var1.pred"]}]}))
+                    debug.level = 0)[, "var1.pred"]
+                else
+                    fallback}]}))
 
         observations[!is.na(value.hidden), value := value.hidden]
         observations[,

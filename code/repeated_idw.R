@@ -39,7 +39,7 @@ repeated.idw = function(
         cbind(w, weights[w], deparse.level = 0)})
     stopifnot(all(sapply(tables, nrow)))
 
-    function(li, group, outcome)
+    function(li, group, outcome, fallback = NA_real_)
        {d = data.table(li, group, outcome)
         d[, by = group, prediction :=
            {s = rep(NA_real_, ncol(source))
@@ -47,6 +47,9 @@ repeated.idw = function(
             s[lisi[!is.na(lisi)]] = outcome[!is.na(lisi)]
             sapply(li, function(i)
                {v = s[tables[[i]][, 1]]
-                sum(v * tables[[i]][, 2], na.rm = T) /
-                    sum(tables[[i]][!is.na(v), 2])})}]
+                if (sum(!is.na(v)))
+                    sum(v * tables[[i]][, 2], na.rm = T) /
+                        sum(tables[[i]][!is.na(v), 2])
+                else
+                    fallback})}]
         d$prediction}}
