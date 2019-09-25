@@ -46,10 +46,11 @@ repeated.idw = function(
             lisi = si[li]
             s[lisi[!is.na(lisi)]] = outcome[!is.na(lisi)]
             sapply(li, function(i)
-               {v = s[tables[[i]][, 1]]
-                if (sum(!is.na(v)))
-                    sum(v * tables[[i]][, 2], na.rm = T) /
-                        sum(tables[[i]][!is.na(v), 2])
+               {tab = tables[[i]]
+                v = s[tab[, 1]]
+                weights = tab[!is.na(v), 2]
+                if (length(weights))
+                    sum(v[!is.na(v)] * weights) / sum(weights)
                 else
                     fallback})}]
         d$prediction}}
