@@ -37,14 +37,15 @@ tests = function()
         fallback = mean(observations$value)
 
         message("Building repeated.idw tables")
-        f = repeated.idw(
+        tables = repeated.idw.tables(
             locations = locs,
             maxdist = maxdist,
             source.subsetter = function(i)
                 fold != fold[i])
 
         message("repeated.idw")
-        print(system.time(observations[, pred.our := f(
+        print(system.time(observations[, pred.our := repeated.idw(
+            tables = tables,
             li = oi,
             group = time,
             outcome = value,
@@ -97,7 +98,7 @@ tests = function()
         observations[, li := match(li, locations$bi)]
 
         message("Building repeated.idw tables")
-        f = repeated.idw(
+        tables = repeated.idw.tables(
             locations = locations[, .(x, y)],
             is.source = fold != -1,
             maxdist = maxdist,
@@ -105,7 +106,8 @@ tests = function()
                 fold[fold != -1] != fold[i])
 
         message("repeated.idw")
-        print(system.time(observations[, pred.our := f(
+        print(system.time(observations[, pred.our := repeated.idw(
+            tables = tables,
             li = li,
             group = time,
             outcome = value,

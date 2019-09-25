@@ -1,7 +1,7 @@
 suppressPackageStartupMessages(
    {library(data.table)})
 
-repeated.idw = function(
+repeated.idw.tables = function(
         locations,
           # A matrix or data frame of points.
         is.source = T,
@@ -38,19 +38,23 @@ repeated.idw = function(
         w = which(weights > minweight & source.subsetter(i))
         cbind(w, weights[w], deparse.level = 0)})
     stopifnot(all(sapply(tables, nrow)))
+    attr(tables, "si") = si
+    attr(tables, "ncol(source)") = ncol(source)
+    tables}
 
-    function(li, group, outcome, fallback = NA_real_)
-       {d = data.table(li, group, outcome)
-        d[, by = group, prediction :=
-           {s = rep(NA_real_, ncol(source))
-            lisi = si[li]
-            s[lisi[!is.na(lisi)]] = outcome[!is.na(lisi)]
-            sapply(li, function(i)
-               {tab = tables[[i]]
-                v = s[tab[, 1]]
-                weights = tab[!is.na(v), 2]
-                if (length(weights))
-                    sum(v[!is.na(v)] * weights) / sum(weights)
-                else
-                    fallback})}]
-        d$prediction}}
+repeated.idw = function(tables, li, group, outcome, fallback = NA_real_)
+   {d = data.table(li, group, outcome)
+    si = attr(tables, "si")
+    d[, by = group, prediction :=
+       {s = rep(NA_real_, attr(tables, "ncol(source)"))
+        lisi = attr(tables, "si")[li]
+        s[lisi[!is.na(lisi)]] = outcome[!is.na(lisi)]
+        sapply(li, function(i)
+           {tab = tables[[i]]
+            v = s[tab[, 1]]
+            weights = tab[!is.na(v), 2]
+            if (length(weights))
+                sum(v[!is.na(v)] * weights) / sum(weights)
+            else
+                fallback})}]
+    d$prediction}
