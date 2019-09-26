@@ -42,11 +42,15 @@ repeated.idw.tables = function(
     attr(tables, "ncol(source)") = ncol(source)
     tables}
 
-repeated.idw = function(tables, li, group, outcome, fallback = NA_real_)
+repeated.idw = function(tables, li, group, outcome, fallback = NA_real_, progress = F)
    {d = data.table(li, group, outcome)
     si = attr(tables, "si")
+    if (progress)
+        bar = txtProgressBar(min = 0, max = length(unique(group)), style = 3)
     d[, by = group, prediction :=
-       {s = rep(NA_real_, attr(tables, "ncol(source)"))
+       {if (progress)
+            setTxtProgressBar(bar, .GRP)
+        s = rep(NA_real_, attr(tables, "ncol(source)"))
         lisi = attr(tables, "si")[li]
         s[lisi[!is.na(lisi)]] = outcome[!is.na(lisi)]
         sapply(li, function(i)
@@ -57,4 +61,6 @@ repeated.idw = function(tables, li, group, outcome, fallback = NA_real_)
                 sum(v[!is.na(v)] * weights) / sum(weights)
             else
                 fallback})}]
+    if (progress)
+        close(bar)
     d$prediction}

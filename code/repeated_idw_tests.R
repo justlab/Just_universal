@@ -111,7 +111,8 @@ tests = function()
             li = li,
             group = time,
             outcome = value,
-            fallback = fallback)]))
+            fallback = fallback,
+            progress = T)]))
 
         message("gstat::idw")
         suppressPackageStartupMessages(library(gstat))
