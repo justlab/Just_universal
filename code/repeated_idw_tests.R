@@ -96,6 +96,8 @@ tests = function()
         observations[is.na(value), value.hidden :=
             location.effect[li] + time.effect[time] + rnorm(.N)]
         observations[, li := match(li, locations$bi)]
+        observations[, make.prediction := locations[observations$li,
+            x <= .1 & y <= .1]]
 
         message("Building repeated.idw tables")
         tables = repeated.idw.tables(
@@ -111,6 +113,7 @@ tests = function()
             li = li,
             group = time,
             outcome = value,
+            make.prediction = make.prediction,
             fallback = fallback,
             progress = T)]))
 
@@ -118,7 +121,8 @@ tests = function()
         suppressPackageStartupMessages(library(gstat))
         observations[, c("x", "y") := locations[li, .(x, y)]]
         observations[, fold := fold[li]]
-        print(system.time({observations[,
+        print(system.time({observations[
+            (make.prediction),
             by = .(this.time = time, this.fold = fold),
             pred.gstat :=
                {train = observations[
@@ -137,7 +141,7 @@ tests = function()
                     fallback}]}))
 
         observations[!is.na(value.hidden), value := value.hidden]
-        observations[,
+        observations[(make.prediction),
            {message("Greatest absolute difference: ",
                 signif(d = 3, max(abs(pred.our - pred.gstat))))
             message("SD: ", round(d = 3, sd(value)))
