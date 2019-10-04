@@ -53,14 +53,16 @@ repeated.idw = function(tables, li, group, outcome,
             setTxtProgressBar(bar, .GRP)
         s = rep(NA_real_, attr(tables, "ncol(source)"))
         lisi = attr(tables, "si")[li]
-        s[lisi[!is.na(lisi)]] = outcome[!is.na(lisi)]
+        nlisi = !is.na(lisi)
+        s[lisi[nlisi]] = outcome[nlisi]
         preds = rep(NA_real_, .N)
         preds[make.prediction] = sapply(li[make.prediction], function(i)
            {tab = tables[[i]]
             v = s[tab[, 1]]
-            weights = tab[!is.na(v), 2]
+            nv = !is.na(v)
+            weights = tab[nv, 2]
             if (length(weights))
-                sum(v[!is.na(v)] * weights) / sum(weights)
+                sum(v[nv] * weights) / sum(weights)
             else
                 fallback})
         preds}]
