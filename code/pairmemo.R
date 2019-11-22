@@ -58,10 +58,11 @@ pairmemo = function(f, directory, mem = F, fst = F)
                 fst::write.fst(v, path)
             else
                 saveRDS(v, file = path)
+            key = c(
+                list(file_format = (if (fst) "fst" else "rds")),
+                key)
             write(file = paste0(path, ".json"),
-                toJSON(auto_unbox = T, digits = NA, c(
-                    list(file_format = (if (fst) "fst" else "rds")),
-                    key)))}
+                toJSON(auto_unbox = T, digits = NA, key))}
         if (mem)
            {kcache[[hash]] = key
             vcache[[hash]] = v}
@@ -87,10 +88,11 @@ pairmemo.list = function(f, filter = function(x) TRUE)
           # JSON files into the memory cache.
            {for (path in paths[!(
                     pairmemo.path2hash(paths) %in% ls(fe$kcache))])
-                fe$kcache[[pairmemo.path2hash(path)]] = fromJSON(path)
+                fe$kcache[[pairmemo.path2hash(path)]] =
+                    fromJSON(path, simplifyVector = F)
             as.list(fe$kcache)}
         else
-            `names<-`(lapply(paths, fromJSON), pairmemo.path2hash(paths))})}
+            `names<-`(lapply(paths, fromJSON, simplifyVector = F), pairmemo.path2hash(paths))})}
 
 pairmemo.get = function(f, filter = function(x) TRUE)
   # Get a list of all cached calls. The name of each element is the
