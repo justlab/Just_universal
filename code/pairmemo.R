@@ -30,7 +30,8 @@ pairmemo = function(f, directory, mem = F, fst = F)
     # `directory` is assumed to already exist, but we'll create
     # its per-function subdirectory that we're going to use if it
     # doesn't already exist.
-    stopifnot(dir.exists(directory))
+    if (!dir.exists(directory))
+        stop("The specified directory does not exist: ", directory)
     directory = file.path(directory, f.name)
     if (mem)
       # The memory cache uses environments instead of lists so we
