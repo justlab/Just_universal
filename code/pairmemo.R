@@ -52,14 +52,18 @@ pairmemo = function(f, directory, mem = F, fst = F)
             v = pairmemo.read.call(fst, path)
         else
           # It's a total cache miss, so actually call the function.
-           {v = do.call(f, key$args)
+           {t1 = proc.time()
+            v = do.call(f, key$args)
+            t2 = proc.time()
             dir.create(directory, showWarnings = FALSE)
             if (fst)
                 fst::write.fst(v, path)
             else
                 saveRDS(v, file = path)
             key = c(
-                list(file_format = (if (fst) "fst" else "rds")),
+                list(
+                    file_format = (if (fst) "fst" else "rds"),
+                    time = unname(t2["elapsed"] - t1["elapsed"])),
                 key)
             write(file = paste0(path, ".json"),
                 toJSON(auto_unbox = T, digits = NA, key))}
