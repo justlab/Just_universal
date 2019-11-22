@@ -82,7 +82,7 @@ pairmemo.list = function(f, filter = function(x) TRUE)
   # for one of those functions is correct.
    {fe = environment(f)
     paths = list.files(fe$directory, pattern = "\\.json$", full.names = T)
-    Filter(filter,
+    l =
        {if (fe$mem)
           # Check for any new entries, and load the corresponding
           # JSON files into the memory cache.
@@ -92,7 +92,25 @@ pairmemo.list = function(f, filter = function(x) TRUE)
                     fromJSON(path, simplifyVector = F)
             as.list(fe$kcache)}
         else
-            `names<-`(lapply(paths, fromJSON, simplifyVector = F), pairmemo.path2hash(paths))})}
+            `names<-`(lapply(paths, fromJSON, simplifyVector = F), pairmemo.path2hash(paths))}
+    if (!length(l))
+        return(l)
+    # Apply the filter manually instead of with `Filter`, so we
+    # can treat 0-length results as false and throw an error for
+    # results of length greater than 2.
+    ix = sapply(l, function(item)
+        {y = filter(item)
+         if (length(y) == 0)
+             F
+         else if (length(y) == 1)
+             if (is.na(y))
+                 F
+             else
+                 as.logical(y)
+         else
+             stop("Filter returned vector of length ", length(y))})
+    stopifnot(length(ix) == length(l))
+    l[which(ix)]}
 
 pairmemo.get = function(f, filter = function(x) TRUE)
   # Get a list of all cached calls. The name of each element is the
