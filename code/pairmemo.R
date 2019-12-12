@@ -49,7 +49,10 @@ pairmemo = function(f, directory, mem = F, fst = F)
             return(vcache[[hash]])
         path = file.path(directory, hash)
         if (file.exists(paste0(path, ".json")))
-            v = pairmemo.read.call(fst, path)
+           {v = pairmemo.read.call(fst, path)
+            if (mem)
+                key = fromJSON(simplifyVector = F,
+                    paste0(path, ".json"))}
         else
           # It's a total cache miss, so actually call the function.
            {t1 = proc.time()
