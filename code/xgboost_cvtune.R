@@ -38,28 +38,7 @@ xgboost.dart.cvtune = function(
             else
                 sum((x - y)^2 * weights) / sum(weights))
 
-    pow2 = function(x) 2^x
-    ps = makeParamSet(
-        # Based on autoxgboost's defaults.
-        makeNumericParam("eta", lower = .01, upper = .5),
-        makeNumericParam("gamma", lower = -7, upper = 6, trafo = pow2),
-        makeNumericParam("lambda", lower = -10, upper = 10, trafo = pow2),
-        makeNumericParam("alpha", lower = -10, upper = 10, trafo = pow2),
-        makeDiscreteParam("max_depth", values = c(3, 6, 9)),
-        makeDiscreteParam("rate_drop", values = c(0, .01, .025, .05)))
-    design = as.data.table(
-        with.temp.seed(as.integer(n.param.vectors), generateDesign(
-            n.param.vectors, par.set = ps, trafo = T,
-            fun = lhs::maximinLHS)))
-    for (dcol in colnames(design))
-      {# Reverse the factorization of discrete parameters.
-       if (is.factor(design[[dcol]]))
-           design[, (dcol) := as.numeric(as.character(get(dcol)))]
-       # Round off the selected parameters to a few significant
-       # figures.
-       if (is.numeric(design[[dcol]]))
-           design[, (dcol) := signif(get(dcol), 2)]}
-    design = unique(design)
+    design = hyperparam.set(n.param.vectors)
 
     fit = function(dslice, params, fast = F)
         xgboost(
@@ -109,6 +88,30 @@ xgboost.dart.cvtune = function(
             newdata = as.matrix(newdata[, mget(ivs)]),
             ntreelimit = 1e6,
             ...))}
+
+hyperparam.set = function(n.param.vectors)
+   {pow2 = function(x) 2^x
+    ps = makeParamSet(
+        # Based on autoxgboost's defaults.
+        makeNumericParam("eta", lower = .01, upper = .5),
+        makeNumericParam("gamma", lower = -7, upper = 6, trafo = pow2),
+        makeNumericParam("lambda", lower = -10, upper = 10, trafo = pow2),
+        makeNumericParam("alpha", lower = -10, upper = 10, trafo = pow2),
+        makeDiscreteParam("max_depth", values = c(3, 6, 9)),
+        makeDiscreteParam("rate_drop", values = c(0, .01, .025, .05)))
+    design = as.data.table(
+        with.temp.seed(as.integer(n.param.vectors), generateDesign(
+            n.param.vectors, par.set = ps, trafo = T,
+            fun = lhs::maximinLHS)))
+    for (dcol in colnames(design))
+      {# Reverse the factorization of discrete parameters.
+       if (is.factor(design[[dcol]]))
+           design[, (dcol) := as.numeric(as.character(get(dcol)))]
+       # Round off the selected parameters to a few significant
+       # figures.
+       if (is.numeric(design[[dcol]]))
+           design[, (dcol) := signif(get(dcol), 2)]}
+    unique(design)}
 
 xgboost.dart.cvtune.example = function(weighted = F)
    {xgb.threads = 10
