@@ -43,14 +43,21 @@ pairmemo = function(f, directory, mem = F, fst = F)
         kcache = pairmemo.cacheenv[[f.name]]$kcache
         vcache = pairmemo.cacheenv[[f.name]]$vcache}
     function(...)
-       {key = list(args = list(...))
+       {args = list(...)
+        return.kv = F
+        if (length(names(args)) && names(args)[1] == "PAIRMEMO.KV")
+          # This argument is meant for us rather than for the wrapped
+          # function. Remove it and set a flag.
+           {return.kv = args[[1]]
+            args = args[-1]}
+        key = list(args = args)
         hash = paste0("h", digest(key, algo = "xxhash64"))
         if (mem && exists(hash, vcache))
             return(vcache[[hash]])
         path = file.path(directory, hash)
         if (file.exists(paste0(path, ".json")))
            {v = pairmemo.read.call(fst, path)
-            if (mem)
+            if (mem || return.kv)
                 key = fromJSON(simplifyVector = F,
                     paste0(path, ".json"))}
         else
@@ -73,7 +80,10 @@ pairmemo = function(f, directory, mem = F, fst = F)
         if (mem)
            {kcache[[hash]] = key
             vcache[[hash]] = v}
-        v}}
+        if (return.kv)
+            list(k = key, v = v)
+        else
+            v}}
 
 pairmemo.path2hash = function(path)
   # Extract the hash alone from the filepath of a JSON metadata file.
