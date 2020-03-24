@@ -15,10 +15,10 @@ download.update.meta = function(data.root, url, to, f, ...)
         meta = (if (!file.exists(meta.path)) list() else
             fromJSON(simplifyVector = F, meta.path))
 
-        stopifnot(0 == system2("curl", c(
+        stopifnot(0 == system2("curl", shQuote(c(
             url, "-o", to.path,
             "--fail", "--remote-time",
-            "--user-agent", "some-program")))
+            "--user-agent", "some-program"))))
 
         meta[[to]] = list(
             url = url,
