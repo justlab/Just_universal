@@ -37,7 +37,6 @@ repeated.idw.tables = function(
        {weights = 1 / (colSums((source - locations[i,])^2) * multiplier)
         w = which(weights > minweight & source.subsetter(i))
         cbind(w, weights[w], deparse.level = 0)})
-    stopifnot(all(sapply(tables, nrow)))
     attr(tables, "si") = si
     attr(tables, "ncol(source)") = ncol(source)
     tables}
