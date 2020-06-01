@@ -11,10 +11,6 @@ suppressPackageStartupMessages(
     library(xgboost)
     library(ParamHelpers)})
 
-this.dir = dirname(tail(n = 1, Filter(Negate(is.null),
-    lapply(sys.frames(), function(x) x$ofile)))[[1]])
-source(file.path(this.dir, "random.R"))
-
 xgboost.dart.cvtune = function(
         d, dv, ivs,
         n.rounds,
@@ -100,7 +96,7 @@ hyperparam.set = function(n.param.vectors)
         makeDiscreteParam("max_depth", values = c(3, 6, 9)),
         makeDiscreteParam("rate_drop", values = c(0, .01, .025, .05)))
     design = as.data.table(
-        with.temp.seed(as.integer(n.param.vectors), generateDesign(
+        Just.universal::with.temp.seed(as.integer(n.param.vectors), generateDesign(
             n.param.vectors, par.set = ps, trafo = T,
             fun = lhs::maximinLHS)))
     for (dcol in colnames(design))

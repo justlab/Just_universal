@@ -1,9 +1,8 @@
-this.dir = dirname(tail(n = 1, Filter(Negate(is.null),
-    lapply(sys.frames(), function(x) x$ofile)))[[1]])
-source(file.path(this.dir, "repeated_idw.R"))
-
 tests = function()
    {set.seed(10)
+
+    repeated.idw = Just.universal::repeated.idw
+    repeated.idw.tables = Just.universal::repeated.idw.tables
 
     message("Generating data")
     basegrid = as.data.table(expand.grid(
