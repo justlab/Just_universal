@@ -1,4 +1,7 @@
-This repository contains a variety of utility code for work in Allan Just's lab at Mount Sinai.
+This R package contains a variety of utility code for work in Allan Just's lab at Mount Sinai. Install it with |X|_.
+
+.. |X| replace:: ``remotes::install_github``
+.. _X: https://www.rdocumentation.org/packages/remotes/topics/install_github
 
 License
 ============================================================
