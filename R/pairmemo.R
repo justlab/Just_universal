@@ -1,5 +1,3 @@
-options(fst_threads = 1)  # Avoid a multithreading bug.
-
 if (!exists("pairmemo.cacheenv"))
     pairmemo.cacheenv = new.env(parent = emptyenv())
 
