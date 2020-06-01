@@ -1,6 +1,3 @@
-suppressPackageStartupMessages(
-   {library(sf)})
-
 #' @export
 grid.as.sf = function(grid.df, x.col, y.col, attr.cols, crs)
   # Given a data frame or data table describing a grid of squares with
@@ -8,9 +5,9 @@ grid.as.sf = function(grid.df, x.col, y.col, attr.cols, crs)
   # polygons. The grid need not be rectangular.
    {x = `[.data.frame`(grid.df, , x.col)
     y = `[.data.frame`(grid.df, , y.col)
-    st_sf(
+    sf::st_sf(
         `[.data.frame`(grid.df, , attr.cols, drop = F),
-        geometry = st_sfc(crs = crs, mapply(SIMPLIFY = F, square.xyd,
+        geometry = sf::st_sfc(crs = crs, mapply(SIMPLIFY = F, square.xyd,
             x,
             y,
             median(c(
@@ -20,7 +17,7 @@ grid.as.sf = function(grid.df, x.col, y.col, attr.cols, crs)
 square.xyd = function(x, y, d)
   # Create a polygon object representing a square from the x- and
   # y-coordinates of the center and its side length `d`.
-   st_polygon(list(matrix(ncol = 2, byrow = T, c(
+   sf::st_polygon(list(matrix(ncol = 2, byrow = T, c(
        x + d/2, y + d/2,    # NE
        x - d/2, y + d/2,    # NW
        x - d/2, y - d/2,    # SW
@@ -28,6 +25,7 @@ square.xyd = function(x, y, d)
        x + d/2, y + d/2)))) # NE
 
 #' @export
+#' @import data.table
 patchwork.regionalize = function(x, y, n.regions)
   # Given cells in a square grid, provided by `x` and `y`
   # vectors, split the area into `n.regions` regions that are
@@ -35,10 +33,7 @@ patchwork.regionalize = function(x, y, n.regions)
   # numbers of cells (except cells left over after division by
   # `n.regions`). Return a vector of the regions, numbered 1 through
   # `n.regions`.
-   {suppressPackageStartupMessages(
-       {library(data.table)})
-
-    stopifnot(length(x) == length(y))
+   {stopifnot(length(x) == length(y))
     stopifnot(n.regions <= length(x))
 
     mg = data.table(

@@ -51,14 +51,13 @@ tests = function()
             fallback = fallback)]))
 
         message("gstat::idw")
-        suppressPackageStartupMessages(library(gstat))
         observations[, c("x", "y") := locs[oi]]
         observations[, fold := fold[oi]]
         print(system.time({observations[,
             by = .(this.time = time, this.fold = fold),
             pred.gstat :=
                {train = observations[time == this.time & fold != this.fold]
-                if (nrow(train)) idw(
+                if (nrow(train)) gstat::idw(
                     formula = value ~ 1,
                     locations = ~ x + y,
                     data = train,
@@ -117,7 +116,6 @@ tests = function()
             progress = T)]))
 
         message("gstat::idw")
-        suppressPackageStartupMessages(library(gstat))
         observations[, c("x", "y") := locations[li, .(x, y)]]
         observations[, fold := fold[li]]
         print(system.time({observations[
@@ -129,7 +127,7 @@ tests = function()
                     fold != this.fold &
                     fold != -1 &
                     !is.na(value)]
-                if (nrow(train)) idw(
+                if (nrow(train)) gstat::idw(
                     formula = value ~ 1,
                     locations = ~ x + y,
                     data = train,

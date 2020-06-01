@@ -1,6 +1,4 @@
-suppressPackageStartupMessages(
-   {library(stringr)})
-
+#' @import stringr
 render.rmd.with.notebook = function(
         input, notebook.path, ...)
   # Render the given R Markdown document and replace references

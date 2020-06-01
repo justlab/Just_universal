@@ -2,3 +2,17 @@ Package: Just.universal
 Version: 0.0.0.9000
 RoxygenNote: 7.0.0
 Encoding: UTF-8
+Imports:
+    data.table,
+    digest,
+    fst,
+    ggplot2,
+    gstat,
+    jsonlite,
+    lhs,
+    lubridate,
+    mlr,
+    readr,
+    rmarkdown,
+    sf,
+    xgboost

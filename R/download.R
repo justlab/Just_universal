@@ -1,6 +1,3 @@
-suppressPackageStartupMessages(
-   {library(jsonlite)})
-
 #' @export
 download.update.meta = function(data.root, url, to, f, ...)
   # Download a file from `url` and save it to `to.path` =
@@ -14,7 +11,7 @@ download.update.meta = function(data.root, url, to, f, ...)
     if (!file.exists(to.path))
        {meta.path = file.path(data.root, "downloads", "meta.json")
         meta = (if (!file.exists(meta.path)) list() else
-            fromJSON(simplifyVector = F, meta.path))
+            jsonlite::fromJSON(simplifyVector = F, meta.path))
 
         stopifnot(0 == system2("curl", shQuote(c(
             url, "-o", to.path,
@@ -28,7 +25,7 @@ download.update.meta = function(data.root, url, to, f, ...)
         # I use the temporary variable `json` to ensure that the
         # write only starts (and the old file is clobbered) after
         # we've succesfully generated the new JSON.
-        json = toJSON(meta[order(names(meta))],
+        json = jsonlite::toJSON(meta[order(names(meta))],
             pretty = T, auto_unbox = T, digits = NA)
         write(file = meta.path, json)}
 

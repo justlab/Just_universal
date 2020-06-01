@@ -1,8 +1,3 @@
-suppressPackageStartupMessages(
-   {library(jsonlite)
-    library(digest)
-    library(tools)})
-
 options(fst_threads = 1)  # Avoid a multithreading bug.
 
 if (!exists("pairmemo.cacheenv"))
@@ -52,14 +47,14 @@ pairmemo = function(f, directory, mem = F, fst = F)
            {return.kv = args[[1]]
             args = args[-1]}
         key = list(args = args)
-        hash = paste0("h", digest(key, algo = "xxhash64"))
+        hash = paste0("h", digest::digest(key, algo = "xxhash64"))
         if (mem && exists(hash, vcache))
             return(vcache[[hash]])
         path = file.path(directory, hash)
         if (file.exists(paste0(path, ".json")))
            {v = pairmemo.read.call(fst, path)
             if (mem || return.kv)
-                key = fromJSON(simplifyVector = F,
+                key = jsonlite::fromJSON(simplifyVector = F,
                     paste0(path, ".json"))}
         else
           # It's a total cache miss, so actually call the function.
@@ -77,7 +72,7 @@ pairmemo = function(f, directory, mem = F, fst = F)
                     time = unname(t2["elapsed"] - t1["elapsed"])),
                 key)
             write(file = paste0(path, ".json"),
-                toJSON(auto_unbox = T, digits = NA, key))}
+                jsonlite::toJSON(auto_unbox = T, digits = NA, key))}
         if (mem)
            {kcache[[hash]] = key
             vcache[[hash]] = v}
@@ -88,7 +83,7 @@ pairmemo = function(f, directory, mem = F, fst = F)
 
 pairmemo.path2hash = function(path)
   # Extract the hash alone from the filepath of a JSON metadata file.
-    file_path_sans_ext(regmatches(path,
+    tools::file_path_sans_ext(regmatches(path,
         regexpr("([a-z0-9]+)\\.json$", path)))
 
 #' @export
@@ -108,10 +103,11 @@ pairmemo.list = function(f, filter = function(x) TRUE)
            {for (path in paths[!(
                     pairmemo.path2hash(paths) %in% ls(fe$kcache))])
                 fe$kcache[[pairmemo.path2hash(path)]] =
-                    fromJSON(path, simplifyVector = F)
+                    jsonlite::fromJSON(path, simplifyVector = F)
             as.list(fe$kcache)}
         else
-            `names<-`(lapply(paths, fromJSON, simplifyVector = F), pairmemo.path2hash(paths))}
+            `names<-`(lapply(paths, jsonlite::fromJSON, simplifyVector = F),
+                pairmemo.path2hash(paths))}
     if (!length(l))
         return(l)
     # Apply the filter manually instead of with `Filter`, so we

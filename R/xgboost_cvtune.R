@@ -6,12 +6,8 @@
 # increasing it seems to slow down XGBoost a lot while only
 # improving performance a little bit.
 
-suppressPackageStartupMessages(
-   {library(data.table)
-    library(xgboost)
-    library(ParamHelpers)})
-
 #' @export
+#' @import data.table
 xgboost.dart.cvtune = function(
         d, dv, ivs,
         n.rounds,
@@ -38,7 +34,7 @@ xgboost.dart.cvtune = function(
     design = hyperparam.set(n.param.vectors)
 
     fit = function(dslice, params, fast = F)
-        xgboost(
+        xgboost::xgboost(
             verbose = 0,
             params = c(
                 list(
@@ -87,6 +83,7 @@ xgboost.dart.cvtune = function(
             ...))}
 
 #' @export
+#' @import ParamHelpers
 hyperparam.set = function(n.param.vectors)
    {pow2 = function(x) 2^x
     ps = makeParamSet(
@@ -111,6 +108,7 @@ hyperparam.set = function(n.param.vectors)
            design[, (dcol) := signif(get(dcol), 2)]}
     unique(design)}
 
+#' @import data.table
 xgboost.dart.cvtune.example = function(weighted = F)
    {xgb.threads = 10
 

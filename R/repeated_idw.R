@@ -1,6 +1,3 @@
-suppressPackageStartupMessages(
-   {library(data.table)})
-
 #' @export
 repeated.idw.tables = function(
         locations,
@@ -45,7 +42,7 @@ repeated.idw.tables = function(
 #' @export
 repeated.idw = function(tables, li, group, outcome,
         make.prediction = T, fallback = NA_real_, progress = F)
-   {d = data.table(li, group, outcome, make.prediction)
+   {d = data.table::data.table(li, group, outcome, make.prediction)
     si = attr(tables, "si")
     if (progress)
         bar = txtProgressBar(min = 0, max = length(unique(group)), style = 3)
