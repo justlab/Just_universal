@@ -8,6 +8,7 @@ options(fst_threads = 1)  # Avoid a multithreading bug.
 if (!exists("pairmemo.cacheenv"))
     pairmemo.cacheenv = new.env(parent = emptyenv())
 
+#' @export
 pairmemo = function(f, directory, mem = F, fst = F)
   # Enable memoization for the named function. It is typically called as
   #   myfun = pairmemo(myfun, "/some/directory")
@@ -90,6 +91,7 @@ pairmemo.path2hash = function(path)
     file_path_sans_ext(regmatches(path,
         regexpr("([a-z0-9]+)\\.json$", path)))
 
+#' @export
 pairmemo.list = function(f, filter = function(x) TRUE)
   # Retrieve the JSON metadata of all saved calls of this function.
   # The result is a list with hashes as names.
@@ -129,6 +131,7 @@ pairmemo.list = function(f, filter = function(x) TRUE)
     stopifnot(length(ix) == length(l))
     l[which(ix)]}
 
+#' @export
 pairmemo.get = function(f, filter = function(x) TRUE)
   # Get a list of all cached calls. The name of each element is the
   # hash, and each element is a list of two elements, `k` (the JSON
@@ -150,6 +153,7 @@ pairmemo.get = function(f, filter = function(x) TRUE)
             v}))
     `names<-`(l, names(keys))}
 
+#' @export
 pairmemo.delete = function(f, filter = function(x) TRUE, verbose = T)
   # Delete cached calls. Set `filter` to selectively delete calls.
   # The call values won't be loaded in any case.

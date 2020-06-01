@@ -1,3 +1,4 @@
+#' @export
 set.seed.with.obj = function(x)
     set.seed(make.seed.for.obj(x))
 
@@ -14,6 +15,7 @@ make.seed.for.obj = function(x)
     close(x)
     seed}
 
+#' @rawNamespace export(with.temp.seed)
 with.temp.seed = function(seeder, expr)
   # Saves the RNG state, seeds the RNG with
   # `set.seed.for.obj(seeder)`, evaluates the expression, restores

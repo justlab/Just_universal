@@ -1,6 +1,7 @@
 suppressPackageStartupMessages(
    {library(jsonlite)})
 
+#' @export
 download.update.meta = function(data.root, url, to, f, ...)
   # Download a file from `url` and save it to `to.path` =
   # `data.root`/downloads/`to` if there isn't already a file

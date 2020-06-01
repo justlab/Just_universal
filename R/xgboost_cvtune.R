@@ -11,6 +11,7 @@ suppressPackageStartupMessages(
     library(xgboost)
     library(ParamHelpers)})
 
+#' @export
 xgboost.dart.cvtune = function(
         d, dv, ivs,
         n.rounds,
@@ -85,6 +86,7 @@ xgboost.dart.cvtune = function(
             ntreelimit = 1e6,
             ...))}
 
+#' @export
 hyperparam.set = function(n.param.vectors)
    {pow2 = function(x) 2^x
     ps = makeParamSet(

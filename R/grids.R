@@ -1,6 +1,7 @@
 suppressPackageStartupMessages(
    {library(sf)})
 
+#' @export
 grid.as.sf = function(grid.df, x.col, y.col, attr.cols, crs)
   # Given a data frame or data table describing a grid of squares with
   # one centroid per row, return an `sf` object of the corresponding
@@ -26,6 +27,7 @@ square.xyd = function(x, y, d)
        x + d/2, y - d/2,    # SE
        x + d/2, y + d/2)))) # NE
 
+#' @export
 patchwork.regionalize = function(x, y, n.regions)
   # Given cells in a square grid, provided by `x` and `y`
   # vectors, split the area into `n.regions` regions that are

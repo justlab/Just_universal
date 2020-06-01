@@ -1,6 +1,7 @@
 suppressPackageStartupMessages(
    {library(data.table)})
 
+#' @export
 repeated.idw.tables = function(
         locations,
           # A matrix or data frame of points.
@@ -41,6 +42,7 @@ repeated.idw.tables = function(
     attr(tables, "ncol(source)") = ncol(source)
     tables}
 
+#' @export
 repeated.idw = function(tables, li, group, outcome,
         make.prediction = T, fallback = NA_real_, progress = F)
    {d = data.table(li, group, outcome, make.prediction)
