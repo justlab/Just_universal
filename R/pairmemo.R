@@ -16,9 +16,9 @@ pairmemo = function(f, directory, mem = F, fst = F)
   # cache hits, especially for large values.
   #
   # If `fst` is true, calls are saved as fst files instead of
-  # RDS files. This is only suitable for data frames (including
-  # data.tables), and uses more disk space, but offers fast I/O.
-  # Note that fst files will always be read as data.tables.
+  # qs files. This is only suitable for data frames (including
+  # data.tables). Note that fst files will always be read as
+  # data.tables.
    {f = substitute(f)
     stopifnot(length(f) == 3 && identical(f[[1]], as.symbol("<-")))
     f.name = deparse(f[[2]])
@@ -65,10 +65,10 @@ pairmemo = function(f, directory, mem = F, fst = F)
             if (fst)
                 fst::write.fst(v, path)
             else
-                saveRDS(v, file = path)
+                qs::qsave(v, file = path)
             key = c(
                 list(
-                    file_format = (if (fst) "fst" else "rds"),
+                    file_format = (if (fst) "fst" else "qs"),
                     time = unname(t2["elapsed"] - t1["elapsed"])),
                 key)
             write(file = paste0(path, ".json"),
@@ -171,4 +171,4 @@ pairmemo.read.call = function(is.fst, path)
    {if (is.fst)
         fst::read.fst(path, as.data.table = T)
     else
-        readRDS(path)}
+        qs::qread(path)}

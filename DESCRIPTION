@@ -12,6 +12,7 @@ Imports:
     lhs,
     lubridate,
     mlr,
+    qs,
     readr,
     rmarkdown,
     sf,
