@@ -39,13 +39,25 @@ pairmemo = function(f, directory, mem = F, fst = F)
         kcache = pairmemo.cacheenv[[f.name]]$kcache
         vcache = pairmemo.cacheenv[[f.name]]$vcache}
     assign(f.name, pos = parent.frame(), function(...)
-       {args = list(...)
+       {args = sys.call()
         return.kv = F
-        if (length(names(args)) && names(args)[1] == "PAIRMEMO.KV")
+        if (length(names(args)) && names(args)[2] == "PAIRMEMO.KV")
           # This argument is meant for us rather than for the wrapped
           # function. Remove it and set a flag.
-           {return.kv = args[[1]]
-            args = args[-1]}
+           {return.kv = eval(args[[2]], parent.frame())
+            args = args[-2]}
+        # Standardize the arguments by using `match.call`.
+        args = lapply(match.call(f, args)[-1], eval, envir = parent.frame())
+        # Remove arguments that are set to their default values,
+        # unless there's a "..." parameter, in which case arguments
+        # might get misassigned if we do this.
+        params = formals(f)
+        if (!("..." %in% names(params)))
+            for (pn in names(params))
+                 if (pn %in% names(args) &&
+                         !identical(params[[pn]], substitute()) &&
+                         identical(params[[pn]], args[[pn]]))
+                     args[[pn]] = NULL
         key = list(args = args)
         hash = paste0("h", digest::digest(key, algo = "xxhash64"))
         if (mem && exists(hash, vcache))
