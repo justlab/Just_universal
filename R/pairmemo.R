@@ -4,8 +4,8 @@ if (!exists("pairmemo.cacheenv"))
 #' @export
 pairmemo = function(f, directory, mem = F, fst = F)
   # Enable memoization for the named function. It is typically called as
-  #   myfun = pairmemo(myfun, "/some/directory")
-  # immediately after the definition of `myfun`.
+  #   pairmemo(directory = "/some/directory",
+  #   myfun <- function (...) {...})
   #
   # `directory` sets the directory to save the paired files of
   # memoized calls and JSON metadata.
@@ -19,8 +19,10 @@ pairmemo = function(f, directory, mem = F, fst = F)
   # RDS files. This is only suitable for data frames (including
   # data.tables), and uses more disk space, but offers fast I/O.
   # Note that fst files will always be read as data.tables.
-   {f.name = deparse(substitute(f))
-    force(f)
+   {f = substitute(f)
+    stopifnot(length(f) == 3 && identical(f[[1]], as.symbol("<-")))
+    f.name = deparse(f[[2]])
+    f = eval(f[[3]], parent.frame())
     # `directory` is assumed to already exist, but we'll create
     # its per-function subdirectory that we're going to use if it
     # doesn't already exist.
@@ -36,7 +38,7 @@ pairmemo = function(f, directory, mem = F, fst = F)
             pairmemo.cacheenv[[f.name]]$vcache = new.env(parent = emptyenv())}
         kcache = pairmemo.cacheenv[[f.name]]$kcache
         vcache = pairmemo.cacheenv[[f.name]]$vcache}
-    function(...)
+    assign(f.name, pos = parent.frame(), function(...)
        {args = list(...)
         return.kv = F
         if (length(names(args)) && names(args)[1] == "PAIRMEMO.KV")
@@ -77,7 +79,7 @@ pairmemo = function(f, directory, mem = F, fst = F)
         if (return.kv)
             list(k = key, v = v)
         else
-            v}}
+            v})}
 
 pairmemo.path2hash = function(path)
   # Extract the hash alone from the filepath of a JSON metadata file.
