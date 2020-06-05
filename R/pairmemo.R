@@ -175,7 +175,7 @@ pairmemo.get = function(f, filter = function(x) TRUE)
     `names<-`(l, names(keys))}
 
 #' @export
-pairmemo.delete = function(f, filter = function(x) TRUE, verbose = T)
+pairmemo.delete = function(f, filter = function(x) TRUE)
   # Delete cached calls. Set `filter` to selectively delete calls.
   # The call values won't be loaded in any case.
    {fe = environment(f)
@@ -188,9 +188,7 @@ pairmemo.delete = function(f, filter = function(x) TRUE, verbose = T)
             if (exists(hash, fe$vcache))
                 rm(list = hash, pos = fe$vcache)}
         deleted = deleted + 1}
-    if (verbose)
-        message("Deleted ", deleted, " cache entr",
-            (if (deleted == 1) "y" else "ies"))}
+    c("Cache entries deleted" = deleted)}
 
 pairmemo.read.call = function(is.fst, path)
    {if (is.fst)
