@@ -2,7 +2,7 @@ if (!exists("pairmemo.cacheenv"))
     pairmemo.cacheenv = new.env(parent = emptyenv())
 
 #' @export
-pairmemo = function(f, directory, mem = F, fst = F)
+pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
   # Enable memoization for the named function. It is typically called as
   #   pairmemo(directory = "/some/directory",
   #   myfun <- function (...) {...})
@@ -19,6 +19,14 @@ pairmemo = function(f, directory, mem = F, fst = F)
   # qs files. This is only suitable for data frames (including
   # data.tables). Note that fst files will always be read as
   # data.tables.
+  #
+  # `ap` ("argument processing") can be set to a named list of
+  # unary functions to apply to the provided arguments. For example,
+  #     ap = list(foo = as.integer)
+  # would cause a `foo` argument, if provided, to be run through
+  # `as.integer` before the cache key is created or it's passed to
+  # `f`. Thus, the cache (and the function code) won't distinguish
+  # between `f(foo = 3)` and `f(foo = 3L)`.
    {f = substitute(f)
     stopifnot(length(f) == 3 && identical(f[[1]], as.symbol("<-")))
     f.name = deparse(f[[2]])
@@ -48,10 +56,15 @@ pairmemo = function(f, directory, mem = F, fst = F)
             args = args[-2]}
         # Standardize the arguments by using `match.call`.
         args = lapply(match.call(f, args)[-1], eval, envir = parent.frame())
+        # Apply any user-provided argument processing in `ap`.
+        params = formals(f)
+        for (pn in names(ap))
+            {stopifnot(pn %in% names(params))
+             if (pn %in% names(args))
+                 args[[pn]] = ap[[pn]](args[[pn]])}
         # Remove arguments that are set to their default values,
         # unless there's a "..." parameter, in which case arguments
         # might get misassigned if we do this.
-        params = formals(f)
         if (!("..." %in% names(params)))
             for (pn in names(params))
                  if (pn %in% names(args) &&
