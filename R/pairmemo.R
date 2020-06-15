@@ -7,7 +7,8 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
   #   myfun <- function (...) {...})
   #
   # `directory` sets the directory to save the paired files of
-  # memoized calls and JSON metadata.
+  # memoized calls and JSON metadata. It can be a single string or
+  # a nullary function that returns a string.
   #
   # If `mem` is true, calls will also be saved in memory (in the
   # variable `pairmemo.cacheenv`), and will be retrieved from
@@ -30,23 +31,25 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
     stopifnot(length(f) == 3 && identical(f[[1]], as.symbol("<-")))
     f.name = deparse(f[[2]])
     f = eval(f[[3]], parent.frame())
-    # `directory` is assumed to already exist, but we'll create
-    # its per-function subdirectory that we're going to use if it
-    # doesn't already exist.
-    if (!dir.exists(directory))
-        stop("The specified directory does not exist: ", directory)
-    directory = file.path(directory, f.name)
-    if (mem)
-      # The memory cache uses environments instead of lists so we
-      # get pass-by-reference semantics. 
-       {if (!exists(f.name, pairmemo.cacheenv))
-           {pairmemo.cacheenv[[directory]] = new.env(parent = emptyenv())
-            pairmemo.cacheenv[[directory]]$kcache = new.env(parent = emptyenv())
-            pairmemo.cacheenv[[directory]]$vcache = new.env(parent = emptyenv())}
-        kcache = pairmemo.cacheenv[[directory]]$kcache
-        vcache = pairmemo.cacheenv[[directory]]$vcache}
+    stopifnot(!missing(directory))
     assign(f.name, pos = parent.frame(), function(...)
        {args = sys.call()
+        directory = (if (is.character(directory)) directory else directory())
+        # `directory` is assumed to already exist, but we'll create
+        # its per-function subdirectory that we're going to use if it
+        # doesn't already exist.
+        if (!dir.exists(directory))
+            stop("The specified directory does not exist: ", directory)
+        directory = file.path(directory, f.name)
+        if (mem)
+          # The memory cache uses environments instead of lists so we
+          # get pass-by-reference semantics.
+           {if (!exists(f.name, pairmemo.cacheenv))
+               {pairmemo.cacheenv[[directory]] = new.env(parent = emptyenv())
+                pairmemo.cacheenv[[directory]]$kcache = new.env(parent = emptyenv())
+                pairmemo.cacheenv[[directory]]$vcache = new.env(parent = emptyenv())}
+            kcache = pairmemo.cacheenv[[directory]]$kcache
+            vcache = pairmemo.cacheenv[[directory]]$vcache}
         return.kv = F
         if (length(names(args)) && names(args)[2] == "PAIRMEMO.KV")
           # This argument is meant for us rather than for the wrapped
