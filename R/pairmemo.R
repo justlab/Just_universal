@@ -55,6 +55,12 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
             args = args[-2]}
         # Standardize the arguments by using `match.call`.
         args = lapply(match.call(f, args)[-1], eval, envir = parent.frame())
+        # Alphabetize the argument names. This should prevent merely
+        # reordering a parameter list from changing cache keys.
+        if (length(names(args)))
+            args = c(
+                args[sort(names(args)[names(args) != ""])],
+                args[names(args) == ""])
         # Apply any user-provided argument processing in `ap`.
         params = formals(f)
         for (pn in names(ap))
