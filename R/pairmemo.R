@@ -27,13 +27,20 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
   # `as.integer` before the cache key is created or it's passed to
   # `f`. Thus, the cache (and the function code) won't distinguish
   # between `f(foo = 3)` and `f(foo = 3L)`.
+
    {f = substitute(f)
     stopifnot(length(f) == 3 && identical(f[[1]], as.symbol("<-")))
     f.name = deparse(f[[2]])
     f = eval(f[[3]], parent.frame())
+
     stopifnot(!missing(directory))
+
+    # Define a new function and set it to `f.name` in the calling
+    # scope.
     assign(f.name, pos = parent.frame(), function(...)
        {args = sys.call()
+
+        # Initialize the directory and the memory cache.
         directory = (if (is.character(directory)) directory else directory())
         # `directory` is assumed to already exist, but we'll create
         # its per-function subdirectory that we're going to use if it
@@ -50,6 +57,8 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
                 pairmemo.cacheenv[[directory]]$vcache = new.env(parent = emptyenv())}
             kcache = pairmemo.cacheenv[[directory]]$kcache
             vcache = pairmemo.cacheenv[[directory]]$vcache}
+
+        # Process the arguments.
         return.kv = F
         if (length(names(args)) && names(args)[2] == "PAIRMEMO.KV")
           # This argument is meant for us rather than for the wrapped
@@ -81,8 +90,12 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
                      args[[pn]] = NULL
         key = list(args = args)
         hash = paste0("h", digest::digest(key, algo = "xxhash64"))
+
+        # Check the memory cache.
         if (mem && exists(hash, vcache))
             return(vcache[[hash]])
+
+        # Check the file cache.
         path = file.path(directory, hash)
         if (file.exists(paste0(path, ".json")))
            {v = pairmemo.read.call(fst, path)
@@ -94,6 +107,7 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
            {t1 = proc.time()
             v = do.call(f, key$args)
             t2 = proc.time()
+
             dir.create(directory, showWarnings = FALSE)
             if (fst)
                 fst::write.fst(v, path)
@@ -106,9 +120,13 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
                 key)
             write(file = paste0(path, ".json"),
                 jsonlite::toJSON(auto_unbox = T, digits = NA, key))}
+
+        # Update the memory cache.
         if (mem)
            {kcache[[hash]] = key
             vcache[[hash]] = v}
+
+        # Return the function value.
         if (return.kv)
             list(k = key, v = v)
         else
