@@ -1,7 +1,7 @@
 pairmemo.cacheenv = new.env(parent = emptyenv())
 
 #' @export
-pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
+pairmemo = function(f, directory, mem = F, fst = F, ap = NULL, n.frame = 1)
   # Enable memoization for the named function. It is typically called as
   #   pairmemo(directory = "/some/directory",
   #   myfun <- function (...) {...})
@@ -27,6 +27,10 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
   # `as.integer` before the cache key is created or it's passed to
   # `f`. Thus, the cache (and the function code) won't distinguish
   # between `f(foo = 3)` and `f(foo = 3L)`.
+  #
+  # `n.frame` is used as an argument to `parent.frame` in the
+  # `assign` call that `pairmemo` makes to name the newly made
+  # function. Set it to 2 if you're writing a wrapper for `pairmemo`.
 
    {f = substitute(f)
     stopifnot(length(f) == 3 && identical(f[[1]], as.symbol("<-")))
@@ -37,7 +41,7 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
 
     # Define a new function and set it to `f.name` in the calling
     # scope.
-    assign(f.name, pos = parent.frame(), function(...)
+    assign(f.name, pos = parent.frame(n.frame), function(...)
        {args = sys.call()
 
         # Initialize the directory and the memory cache.
