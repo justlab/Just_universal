@@ -1,5 +1,4 @@
-if (!exists("pairmemo.cacheenv"))
-    pairmemo.cacheenv = new.env(parent = emptyenv())
+pairmemo.cacheenv = new.env(parent = emptyenv())
 
 #' @export
 pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
