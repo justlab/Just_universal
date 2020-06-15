@@ -40,11 +40,11 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL)
       # The memory cache uses environments instead of lists so we
       # get pass-by-reference semantics. 
        {if (!exists(f.name, pairmemo.cacheenv))
-           {pairmemo.cacheenv[[f.name]] = new.env(parent = emptyenv())
-            pairmemo.cacheenv[[f.name]]$kcache = new.env(parent = emptyenv())
-            pairmemo.cacheenv[[f.name]]$vcache = new.env(parent = emptyenv())}
-        kcache = pairmemo.cacheenv[[f.name]]$kcache
-        vcache = pairmemo.cacheenv[[f.name]]$vcache}
+           {pairmemo.cacheenv[[directory]] = new.env(parent = emptyenv())
+            pairmemo.cacheenv[[directory]]$kcache = new.env(parent = emptyenv())
+            pairmemo.cacheenv[[directory]]$vcache = new.env(parent = emptyenv())}
+        kcache = pairmemo.cacheenv[[directory]]$kcache
+        vcache = pairmemo.cacheenv[[directory]]$vcache}
     assign(f.name, pos = parent.frame(), function(...)
        {args = sys.call()
         return.kv = F
