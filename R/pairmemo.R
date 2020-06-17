@@ -156,7 +156,7 @@ pairmemo.list = function(f, filter = function(x) TRUE)
   # Retrieve the JSON metadata of all saved calls of this function.
   # The result is a list with hashes as names.
   #
-  # This function is used internally by `pairmemo.get` and `pairmemo.delete`,
+  # This function is used internally by `pairmemo.get` and `pairmemo.clear`,
   # but is also useful for checking that the filter you intend to use
   # for one of those functions is correct.
    {fe = environment(f)
@@ -216,7 +216,7 @@ pairmemo.get = function(f, filter = function(x) TRUE)
     `names<-`(l, names(keys))}
 
 #' @export
-pairmemo.delete = function(f, filter = function(x) TRUE)
+pairmemo.clear = function(f, filter = function(x) TRUE)
   # Delete cached calls. Set `filter` to selectively delete calls.
   # The call values won't be loaded in any case.
    {fe = environment(f)
