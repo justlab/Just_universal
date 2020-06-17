@@ -38,31 +38,41 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL, n.frame = 1)
     f = eval(f[[3]], parent.frame())
 
     stopifnot(!missing(directory))
+    kcache = NULL
+    vcache = NULL
+    initialized = F
+    init = function()
+      # Initialize the directory and the memory cache.
+       {if (initialized)
+            return()
 
-    # Define a new function and set it to `f.name` in the calling
-    # scope.
-    assign(f.name, pos = parent.frame(n.frame), function(...)
-       {args = sys.call()
-
-        # Initialize the directory and the memory cache.
-        directory = (if (is.character(directory)) directory else directory())
+        if (!is.character(directory))
+            directory <<- directory()
         # `directory` is assumed to already exist, but we'll create
         # its per-function subdirectory that we're going to use if it
         # doesn't already exist.
         if (!dir.exists(directory))
             stop("The specified directory does not exist: ", directory)
-        directory = file.path(directory, f.name)
+        directory <<- file.path(directory, f.name)
+
         if (mem)
           # The memory cache uses environments instead of lists so we
           # get pass-by-reference semantics.
-           {if (!exists(f.name, pairmemo.cacheenv))
-               {pairmemo.cacheenv[[directory]] = new.env(parent = emptyenv())
-                pairmemo.cacheenv[[directory]]$kcache = new.env(parent = emptyenv())
-                pairmemo.cacheenv[[directory]]$vcache = new.env(parent = emptyenv())}
-            kcache = pairmemo.cacheenv[[directory]]$kcache
-            vcache = pairmemo.cacheenv[[directory]]$vcache}
+           {pairmemo.cacheenv[[directory]] = new.env(parent = emptyenv())
+            pairmemo.cacheenv[[directory]]$kcache = new.env(parent = emptyenv())
+            pairmemo.cacheenv[[directory]]$vcache = new.env(parent = emptyenv())
+            kcache <<- pairmemo.cacheenv[[directory]]$kcache
+            vcache <<- pairmemo.cacheenv[[directory]]$vcache}
+
+        initialized <<- T}
+
+    # Define a new function and set it to `f.name` in the calling
+    # scope.
+    assign(f.name, pos = parent.frame(n.frame), function(...)
+       {init()
 
         # Process the arguments.
+        args = sys.call()
         return.kv = F
         if (length(names(args)) && names(args)[2] == "PAIRMEMO.KV")
           # This argument is meant for us rather than for the wrapped
@@ -150,6 +160,7 @@ pairmemo.list = function(f, filter = function(x) TRUE)
   # but is also useful for checking that the filter you intend to use
   # for one of those functions is correct.
    {fe = environment(f)
+    fe$init()
     paths = list.files(fe$directory, pattern = "\\.json$", full.names = T)
     l =
        {if (fe$mem)
@@ -209,6 +220,7 @@ pairmemo.delete = function(f, filter = function(x) TRUE)
   # Delete cached calls. Set `filter` to selectively delete calls.
   # The call values won't be loaded in any case.
    {fe = environment(f)
+    fe$init()
     deleted = 0
     for (hash in names(pairmemo.list(f, filter)))
        {file.remove(paste0(file.path(fe$directory, hash), ".json"))
