@@ -96,12 +96,21 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL, n.frame = 1)
         # Remove arguments that are set to their default values,
         # unless there's a "..." parameter, in which case arguments
         # might get misassigned if we do this.
+        #
+        # We only evaluate default values that are constant
+        # expressions.
         if (!("..." %in% names(params)))
             for (pn in names(params))
-                 if (pn %in% names(args) &&
-                         !identical(params[[pn]], substitute()) &&
-                         identical(params[[pn]], args[[pn]]))
-                     args[[pn]] = NULL
+                {if (!(pn %in% names(args)) ||
+                         identical(params[[pn]], substitute()))
+                     next
+                 default.value = tryCatch(
+                     eval.const(bquote(list(.(params[[pn]])))),
+                     error = function(e) e)
+                 if (!length(default.value) ||
+                         !identical(default.value[[1]], args[[pn]]))
+                     next
+                 args[[pn]] = NULL}
         key = list(args = args)
         hash = paste0("h", digest::digest(key, algo = "xxhash64"))
 
