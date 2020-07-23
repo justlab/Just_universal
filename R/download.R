@@ -1,5 +1,5 @@
 #' @export
-download.update.meta = function(data.root, url, to, f, ...)
+download.update.meta = function(data.root, url, to, f, ..., CURL = character())
   # Download a file from `url` and save it to `to.path` =
   # `data.root`/downloads/`to` if there isn't already a file
   # there, then call `f(to.path, ...)`. Then create or
@@ -16,7 +16,8 @@ download.update.meta = function(data.root, url, to, f, ...)
         stopifnot(0 == system2("curl", shQuote(c(
             url, "-o", to.path,
             "--fail", "--remote-time",
-            "--user-agent", "some-program"))))
+            "--user-agent", "some-program",
+            CURL))))
 
         meta[[to]] = list(
             url = url,
