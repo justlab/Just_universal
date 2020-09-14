@@ -1,15 +1,16 @@
 #' @export
-download.update.meta = function(data.root, url, to, f, ..., CURL = character())
-  # Download a file from `url` and save it to `to.path` =
-  # `data.root`/downloads/`to` if there isn't already a file
-  # there, then call `f(to.path, ...)`. Then create or
-  # update a metadata file that shows where each file was gotten,
-  # when it was downloaded, and its hash.
-   {to.path = file.path(data.root, "downloads", to)
+download.update.meta = function(
+        url, dir, to = basename(url), curl = character())
+  # Download a file from `url` and save it to `to.path` = `dir`/`to`
+  # if there isn't already a file there, creating any needed
+  # directories. Then create or update a metadata file in `dir` that
+  # shows where each file was gotten, when it was downloaded, and its
+  # hash. Return `to.path`.
+   {to.path = file.path(dir, to)
     dir.create(dirname(to.path), showWarnings = F, recursive = T)
 
     if (!file.exists(to.path))
-       {meta.path = file.path(data.root, "downloads", "meta.json")
+       {meta.path = file.path(dir, "meta.json")
         meta = (if (!file.exists(meta.path)) list() else
             jsonlite::fromJSON(simplifyVector = F, meta.path))
 
@@ -17,7 +18,7 @@ download.update.meta = function(data.root, url, to, f, ..., CURL = character())
             url, "-o", to.path,
             "--fail", "--remote-time",
             "--user-agent", "some-program",
-            CURL))))
+            curl))))
 
         meta[[to]] = list(
             url = url,
@@ -30,4 +31,4 @@ download.update.meta = function(data.root, url, to, f, ..., CURL = character())
             pretty = T, auto_unbox = T, digits = NA)
         write(file = meta.path, json)}
 
-    f(to.path, ...)}
+    to.path}
