@@ -4,6 +4,7 @@ RoxygenNote: 7.0.0
 Encoding: UTF-8
 Imports:
     data.table,
+    DBI,
     digest,
     fst,
     ggplot2,
