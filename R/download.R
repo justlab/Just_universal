@@ -26,11 +26,13 @@ download.update.meta = function(
                (file             text primary key,
                 url              text,
                 time_downloaded  integer,
+                size             integer not null,
                 sha256           blob not null) without rowid")}
         append.one.row.to.db(meta, "Downloads", list(
             file = to,
             url = url,
             time_downloaded = as.integer(lubridate::now("UTC")),
+            size = file.size(to.path),
             sha256 = list(digest::digest(file = to.path,
                 algo = "sha256", raw = T))))}
 
