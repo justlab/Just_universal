@@ -142,4 +142,26 @@ tests = function()
            {message("Greatest absolute difference: ",
                 signif(d = 3, max(abs(pred.our - pred.gstat))))
             message("SD: ", round(d = 3, sd(value)))
-            message("RMSE: ", round(d = 3, sqrt(mean((value - pred.our)^2))))}]})}
+            message("RMSE: ", round(d = 3, sqrt(mean((value - pred.our)^2))))}]})
+
+    # Test for a bug involving duplicate (li, group) pairs.
+    message("\n~~~~~ Duplicate (li, group) pairs")
+    d = data.table(
+        x = c(0, 1, 2, 3),
+        y = c(0, 0, 1, 0),
+        v = c(5, 10, 15, 20))
+    tables = repeated.idw.tables(
+        locations = d[, .(x, y)],
+        source.subsetter = function(i)
+            (1:nrow(d)) != i)
+    result1 = repeated.idw(
+        tables = tables, li = c(1 : nrow(d), 1), group = 1,
+        outcome = c(d$v, NA))
+    result2 = repeated.idw(
+        tables = tables, li = c(1 : nrow(d), 1, 2), group = 1,
+        outcome = c(d$v, NA, NA))
+    stopifnot(result1[nrow(d) + 1] == d[-1,
+       {w = 1/((x - d[1, x])^2 + (y - d[1, y])^2)
+        sum(v * w)/sum(w)}])
+    stopifnot(result1[nrow(d) + 1] == result2[nrow(d) + 1])
+    message("Passed")}

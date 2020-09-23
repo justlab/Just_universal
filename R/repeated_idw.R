@@ -43,6 +43,8 @@ repeated.idw.tables = function(
 repeated.idw = function(tables, li, group, outcome,
         make.prediction = T, fallback = NA_real_, progress = F)
    {d = data.table::data.table(li, group, outcome, make.prediction)
+    if (nrow(d[!is.na(outcome), by = .(li, group), if (.N > 1) 1]))
+        stop("repeated.idw: Detected more than one non-NA value for a single (li, group) pair")
     si = attr(tables, "si")
     if (progress)
         bar = txtProgressBar(min = 0, max = length(unique(group)), style = 3)
@@ -51,7 +53,7 @@ repeated.idw = function(tables, li, group, outcome,
             setTxtProgressBar(bar, .GRP)
         s = rep(NA_real_, attr(tables, "ncol(source)"))
         lisi = attr(tables, "si")[li]
-        nlisi = !is.na(lisi)
+        nlisi = !is.na(lisi) & !is.na(outcome)
         s[lisi[nlisi]] = outcome[nlisi]
         preds = rep(NA_real_, .N)
         preds[make.prediction] = sapply(li[make.prediction], function(i)
