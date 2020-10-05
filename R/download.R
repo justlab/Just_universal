@@ -28,7 +28,7 @@ download.update.meta = function(
                 time_downloaded  integer,
                 size             integer not null,
                 sha256           blob not null) without rowid")}
-        append.one.row.to.db(meta, "Downloads", list(
+        append.or.replace.one.row(meta, "Downloads", list(
             file = to,
             url = url,
             time_downloaded = as.integer(lubridate::now("UTC")),
@@ -38,10 +38,12 @@ download.update.meta = function(
 
     to.path}
 
-append.one.row.to.db = function(db, table.name, l)
+append.or.replace.one.row = function(db, table.name, l)
   # We can't just use `dbAppendTable` because one of the columns
-  # has to be a list, and data frames can't have lists as columns.
+  # has to be a list, and data frames can't have lists as columns;
+  # furthermore, we want `insert or replace`, not just `insert`.
     dbExecute(db,
-        sqlAppendTableTemplate(db, table.name, row.names = F,
-            `colnames<-`(data.frame(t(rep(1, length(l)))), names(l))),
+         sub("INSERT", "INSERT OR REPLACE",
+            sqlAppendTableTemplate(db, table.name, row.names = F,
+                `colnames<-`(data.frame(t(rep(1, length(l)))), names(l)))),
         unname(l))
