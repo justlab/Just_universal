@@ -5,8 +5,8 @@ download.update.meta = function(
   # Download a file from `url` and save it to `to.path` = `dir`/`to`
   # if there isn't already a file there, creating any needed
   # directories. Then create or update a database of metadata in `dir`
-  # that shows where each file was gotten, when it was downloaded, and
-  # its hash. Return `to.path`.
+  # that shows where each file was gotten, when it was downloaded, its
+  # size, and its hash. Return `to.path`.
    {to.path = file.path(dir, to)
     dir.create(dirname(to.path), showWarnings = F, recursive = T)
 
