@@ -5,62 +5,91 @@
 # https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=overview
 
 #' @export
-daily.var.from.climate.data.store = function(
+add.daily.var.from.climate.data.store = function(
         d, vname.in, dataset, vname.out,
         target.tz, area,
         download.dir, download.filename.fmt,
         progress = F)
    {stopifnot(all(c("lon", "lat", "date") %in% colnames(d)))
     if (progress)
-       {pbar = pbapply::startpb(max = length(unique(d$date)))
+       {pbar = pbapply::startpb(max = length(unique(year(d$date))))
         if (is.null(pbar))
             progress = F}
-    d[, by = date, .SDcols = c("lon", "lat"), (vname.out) :=
-      # The data is grouped into one raster by UTC day with one band
-      # per hour. For each location, take the mean of all hours on the
+    st.data = function(y)
+        st_as_sf(rgdal::readGDAL(silent = T,
+            climate.data.store.file(
+                y, area, vname.in, dataset,
+                download.dir, download.filename.fmt)))
+    d[, by = .(the.year = year(date)), (vname.out) :=
+      # The data is grouped into one raster by year with one band per
+      # UTC hour. For each location, take the mean of all hours on the
       # requested date in `target.tz`.
-       {if (progress)
+       {coord = as.data.table(st_coordinates(st.data(the.year)))
+        # Find which cell of the grid corresponds to each (lon, lat)
+        # pair.
+        cell.ix = sapply(1 : .N, function(i)
+            which.min((lon[i] - coord$X)^2 + (lat[i] - coord$Y)^2))
+        cell.ix[
+          # Set `cell.ix` to NA when the location isn't actually
+          # inside the cell.
+            abs(lon - coord[cell.ix, X]) >
+                median(diff(sort(unique(coord$X)))) ||
+            abs(lat - coord[cell.ix, Y]) >
+                median(diff(sort(unique(coord$Y))))] = NA_integer_
+        # Get the 24 hours before and after this year for time-zone
+        # issues.
+        dl = function(y)
+            as.data.table(st.data(y))[, -"geometry"]
+        prev = dl(the.year - 1)
+        grid = as.matrix(cbind(
+            prev[, mget(tail(names(prev), 24))],
+            dl(the.year),
+            dl(the.year + 1)[, 1:24, with = F]))
+        dates = as.Date(tz = target.tz, seq(
+            lubridate::make_datetime(the.year - 1, 12, 31),
+            lubridate::make_datetime(the.year + 1, 1, 1, 23),
+            by = "hour"))
+        stopifnot(length(dates) == ncol(grid))
+        out = sapply(1 : .N, function(i)
+            mean(grid[cell.ix[i], dates == date[i]]))
+        if (progress)
             pbapply::setpb(pbar, .GRP)
-        times = lubridate::with_tz(tz = "UTC",
-            lubridate::make_datetime(tz = target.tz,
-                year(date), month(date), mday(date), c(0, 23)))
-        times = seq(times[1], times[2], by = "hour")
-        dates = as.Date(times, tz = "UTC")
-        rowMeans(do.call(cbind, lapply(unique(dates), function(udate)
-            raster::extract(y = .SD, x = raster::stack(
-                climate.data.store.file(
-                    udate, area, vname.in, dataset,
-                    download.dir, download.filename.fmt),
-                bands = hour(times[dates == udate]) + 1)))))}]
+        out}]
     if (progress)
         close(pbar)}
 
 climate.data.store.file = function(
-        date, area, vname.in, dataset,
+        the.year, area, vname.in, dataset,
         download.dir, download.filename.fmt)
-   {fname = sprintf(download.filename.fmt,
-        year(date), month(date), mday(date))
+   {fname = sprintf(download.filename.fmt, the.year)
     fpath = file.path(download.dir, fname)
     if (!file.exists(fpath))
-       {while (T)
-           {reply = jsonlite::fromJSON(system2("curl", stdout = T, shQuote(c(
-                paste0("https://cds.climate.copernicus.eu/api/v2/resources/",
-                    dataset),
-                "--fail", "--remote-time",
+       {message("Downloading ", the.year, " ", vname.in, " from Climate Data Store")
+        message("    (This may take a while.)")
+        reply = jsonlite::fromJSON(system2("curl", stdout = T, shQuote(c(
+            paste0("https://cds.climate.copernicus.eu/api/v2/resources/",
+                dataset),
+            "--fail",
+            "--user-agent", "some-program",
+            climate.data.store.creds(),
+            "-d", jsonlite::toJSON(auto_unbox = T, digits = NA, list(
+                year = the.year,
+                month = 1 : 12,
+                day = 1 : 31,
+                time = sprintf("%02d:00", 0 : 23),
+                format = "netcdf",
+                product_type = "reanalysis",
+                variable = vname.in,
+                area = area,
+                grid = c(0.125, 0.125)))))))
+        while (reply$state %in% c("queued", "running"))
+           {Sys.sleep(15)
+            reply = jsonlite::fromJSON(system2("curl", stdout = T, shQuote(c(
+                paste0("https://cds.climate.copernicus.eu/api/v2/tasks/",
+                    reply$request_id),
+                "--fail",
                 "--user-agent", "some-program",
-                climate.data.store.creds(),
-                "-d", jsonlite::toJSON(auto_unbox = T, digits = NA, list(
-                    year = year(date), month = month(date), day = mday(date),
-                    format = "netcdf",
-                    product_type = "reanalysis",
-                    variable = vname.in,
-                    time = sprintf("%02d:00", 0 : 23),
-                    area = area,
-                    grid = c(0.125, 0.125)))))))
-            if (reply$state == "queued")
-                Sys.sleep(1)
-            else
-                break}
+                climate.data.store.creds()))))}
         stopifnot(is.character(reply$location))
         download.update.meta(
             reply$location,
