@@ -164,4 +164,22 @@ tests = function()
        {w = 1/((x - d[1, x])^2 + (y - d[1, y])^2)
         sum(v * w)/sum(w)}])
     stopifnot(result1[nrow(d) + 1] == result2[nrow(d) + 1])
+    message("Passed")
+
+    message("\n~~~~~ Self-interpolation")
+    d = data.table(
+        x = c(0, 1, 2),
+        y = c(0, 0, 1),
+        v = c(5, 10, NA))
+    result = repeated.idw(
+        tables = repeated.idw.tables(
+            locations = d[, .(x, y)]),
+        li = rep(1 : nrow(d), 2),
+        group = 1,
+        outcome = c(d$v, rep(NA, nrow(d))))
+    expect = d[c(1, 2),
+       {w = 1/((x - d[3, x])^2 + (y - d[3, y])^2)
+        sum(v * w)/sum(w)}]
+    stopifnot(identical(result,
+       rep(c(d$v[1], d$v[2], expect), 2)))
     message("Passed")}

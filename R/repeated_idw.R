@@ -62,7 +62,12 @@ repeated.idw = function(tables, li, group, outcome,
             nv = !is.na(v)
             weights = tab[nv, 2]
             if (length(weights))
-                sum(v[nv] * weights) / sum(weights)
+               {if (Inf %in% weights)
+                  # Treat the positively infinite weights as 1 and all
+                  # others as 0.
+                    mean(v[nv][weights == Inf])
+                else
+                    sum(v[nv] * weights) / sum(weights)}
             else
                 fallback})
         preds}]
