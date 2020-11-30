@@ -18,4 +18,5 @@ Imports:
     readr,
     rmarkdown,
     sf,
-    xgboost
+    xgboost,
+    RSQLite
