@@ -51,7 +51,9 @@ render.rmd.with.notebook = function(
         counters[type] = counters[type] + 1
         refs = str_extract_all(caption.headers[i, 4],
             "notebook\\.html#[^ :,]+")[[1]]
-        display.counter = paste0(type.nosup, " ",
+        display.counter = sprintf(
+            '<span class="figtab-number">%s %s%s</span>',
+            type.nosup,
             (if (is.sup) "S" else ""),
             counters[type])
         if (length(refs) == 0)
