@@ -21,11 +21,10 @@ render.rmd.with.notebook = function(
     # Insert the appropriate table or figure, extracted from the
     # notebook, above each caption.
     caption.headers = str_match_all(html,
-       "<p>(Table|Figure) ((?:notebook\\.html#[^ :,]+[, ]*)+):")[[1]]
+       "<p>(Supplemental )?(Table|Figure) ((?:notebook\\.html#[^ :,]+[, ]*)+):")[[1]]
     for (i in 1 : nrow(caption.headers))
-       {
-        referents = sapply(
-            str_split(caption.headers[i, 3], ", ")[[1]],
+       {referents = sapply(
+            str_split(caption.headers[i, 4], ", ")[[1]],
             function(ref)
                {got = str_extract(notebook, regex(dotall = T,
                     sprintf('<(table|figure) id="%s">.+?</\\1>',
@@ -33,34 +32,44 @@ render.rmd.with.notebook = function(
                 if (is.na(got))
                     stop(paste("Reference not found:", ref))
                 got})
-        
+
         html = str_replace(html,
             fixed(caption.headers[i, 1]),
-            paste0(paste(collapse = "\n", referents), "\n", caption.headers[i, 1]))}
+            paste0(paste(collapse = "\n", referents),
+                sprintf("\n<p>%s %s:",
+                    caption.headers[i, 3],
+                    caption.headers[i, 4])))}
 
     # Number tables and figures.
-    counters = c(Table = 0, Figure = 0)
+    counters = c(Table = 0, Figure = 0,
+        "Supplemental Table" = 0, "Supplemental Figure" = 0)
     for (i in 1 : nrow(caption.headers))
-       {type = caption.headers[i, 2]
+       {is.sup = !is.na(caption.headers[i, 2])
+        type.nosup = caption.headers[i, 3]
+        type = paste0((if (is.sup) caption.headers[i, 2] else ""),
+            type.nosup)
         counters[type] = counters[type] + 1
-        refs = str_extract_all(caption.headers[i, 3],
+        refs = str_extract_all(caption.headers[i, 4],
             "notebook\\.html#[^ :,]+")[[1]]
+        display.counter = paste0(type.nosup, " ",
+            (if (is.sup) "S" else ""),
+            counters[type])
         if (length(refs) == 0)
             stop()
         else if (length(refs) == 1)
             html = str_replace_all(html,
-                fixed(paste(type, refs)),
-                paste(type, counters[type]))
+                fixed(paste(type.nosup, refs)),
+                display.counter)
         else
           # Figures with subfigures get the subfigures identified
           # with letters, like "Figure 2(a)".
            {html = str_replace_all(html,
-                fixed(paste(type, caption.headers[i, 3])),
-                paste(type, counters[type]))
+                fixed(paste(type.nosup, caption.headers[i, 4])),
+                display.counter)
             for (i in seq_along(refs))
                 html = str_replace_all(html,
                     fixed(paste(type, refs[i])),
-                    sprintf("%s %d(%s)",
-                        type, counters[type], letters[i]))}}
+                    sprintf("%s(%s)",
+                        display.counter, letters[i]))}}
 
     cat(file = out.path, html)}
