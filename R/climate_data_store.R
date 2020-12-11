@@ -39,17 +39,21 @@ add.daily.var.from.climate.data.store = function(
         # Get the 24 hours before and after this year for time-zone
         # issues.
         dl = function(y)
-            as.data.table(st.data(y))[, -"geometry"]
+           {x = as.data.table(st.data(y))[, -"geometry"]
+            # CDS has a bug where it sometimes returns extra all-NA
+            # bands. Drop them.
+            x[, with = F, which(
+               sapply(x, function(col) !all(is.na(col))))]}
         prev = dl(the.year - 1)
         grid = as.matrix(cbind(
             prev[, mget(tail(names(prev), 24))],
             dl(the.year),
-            dl(the.year + 1)[, 1:24, with = F]))
+            if (the.year + 1 <= year(lubridate::today("UTC")))
+                dl(the.year + 1)[, 1:24, with = F]))
         dates = as.Date(tz = target.tz, seq(
             lubridate::make_datetime(the.year - 1, 12, 31),
             lubridate::make_datetime(the.year + 1, 1, 1, 23),
-            by = "hour"))
-        stopifnot(length(dates) == ncol(grid))
+            by = "hour"))[1 : ncol(grid)]
         out = sapply(1 : .N, function(i)
             mean(grid[cell.ix[i], dates == date[i]]))
         if (progress)
