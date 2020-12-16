@@ -41,36 +41,37 @@ repeated.idw.tables = function(
 
 #' @export
 repeated.idw = function(tables, li, group, outcome,
-        make.prediction = T, fallback = NA_real_, progress = F)
+        make.prediction = T, fallback = NA_real_,
+        future = F)
    {d = data.table::data.table(li, group, outcome, make.prediction)
     if (nrow(d[!is.na(outcome), by = .(li, group), if (.N > 1) 1]))
         stop("repeated.idw: Detected more than one non-NA value for a single (li, group) pair")
     si = attr(tables, "si")
-    if (progress)
-        bar = txtProgressBar(min = 0, max = length(unique(group)), style = 3)
-    d[, by = group, prediction :=
-       {if (progress)
-            setTxtProgressBar(bar, .GRP)
-        s = rep(NA_real_, attr(tables, "ncol(source)"))
-        lisi = attr(tables, "si")[li]
-        nlisi = !is.na(lisi) & !is.na(outcome)
-        s[lisi[nlisi]] = outcome[nlisi]
-        preds = rep(NA_real_, .N)
-        preds[make.prediction] = sapply(li[make.prediction], function(i)
-           {tab = tables[[i]]
-            v = s[tab[, 1]]
-            nv = !is.na(v)
-            weights = tab[nv, 2]
-            if (length(weights))
-               {if (Inf %in% weights)
-                  # Treat the positively infinite weights as 1 and all
-                  # others as 0.
-                    mean(v[nv][weights == Inf])
+
+    d[, dix := .I]
+    f = (if (future) future.apply::future_lapply else lapply)
+
+    d = rbindlist(f(split(by = "group", d), function(chunk)
+       chunk[, .(dix, prediction =
+           {s = rep(NA_real_, attr(tables, "ncol(source)"))
+            lisi = attr(tables, "si")[li]
+            nlisi = !is.na(lisi) & !is.na(outcome)
+            s[lisi[nlisi]] = outcome[nlisi]
+            preds = rep(NA_real_, .N)
+            preds[make.prediction] = sapply(li[make.prediction], function(i)
+               {tab = tables[[i]]
+                v = s[tab[, 1]]
+                nv = !is.na(v)
+                weights = tab[nv, 2]
+                if (length(weights))
+                   {if (Inf %in% weights)
+                      # Treat the positively infinite weights as 1 and all
+                      # others as 0.
+                        mean(v[nv][weights == Inf])
+                    else
+                        sum(v[nv] * weights) / sum(weights)}
                 else
-                    sum(v[nv] * weights) / sum(weights)}
-            else
-                fallback})
-        preds}]
-    if (progress)
-        close(bar)
-    d$prediction}
+                    fallback})
+            preds})]))
+
+    d$prediction[order(d$dix)]}
