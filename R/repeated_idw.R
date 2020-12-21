@@ -52,7 +52,7 @@ repeated.idw = function(tables, li, group, outcome,
     f = (if (future) future.apply::future_lapply else lapply)
 
     d = rbindlist(f(split(by = "group", d), function(chunk)
-       chunk[, .(dix, prediction =
+       chunk[, .(dix, prediction = if (!any(make.prediction)) NA_real_ else
            {s = rep(NA_real_, attr(tables, "ncol(source)"))
             lisi = attr(tables, "si")[li]
             nlisi = !is.na(lisi) & !is.na(outcome)
