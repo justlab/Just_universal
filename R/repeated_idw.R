@@ -49,7 +49,10 @@ repeated.idw = function(tables, li, group, outcome,
     si = attr(tables, "si")
 
     d[, dix := .I]
-    f = (if (future) future.apply::future_lapply else lapply)
+    f = (if (future)
+        function(...) future.apply::future_lapply(
+            future.seed = T, ...) else
+        lapply)
 
     d = rbindlist(f(split(by = "group", d), function(chunk)
        chunk[, .(dix, prediction = if (!any(make.prediction)) NA_real_ else
