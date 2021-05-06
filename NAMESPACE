@@ -2,6 +2,7 @@
 
 export(add.daily.var.from.climate.data.store)
 export(add.daily.var.from.merra2.gmi)
+export(assert)
 export(download.update.meta)
 export(eval.const)
 export(grid.as.sf)

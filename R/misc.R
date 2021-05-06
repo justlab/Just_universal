@@ -1,4 +1,7 @@
 #' @export
+assert = stopifnot
+
+#' @export
 punl = function(...)
   # Like 'list', but uses punning to generate default names, so
   #   punl(a, b, c = x, d)
