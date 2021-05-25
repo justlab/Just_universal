@@ -1,7 +1,8 @@
 # Get a variable from the Modern-Era Retrospective analysis for
 # Research and Applications, Version 2, Global Modeling Initiative
 # (MERRA-2 GMI) and compute the daily mean for each date and (lon,
-# lat) pair in a data table.
+# lat) pair in a data table. Set `hours` to use only a subset of hours
+# (e.g., a single hour) for each date.
 #
 # Variables are described at e.g.
 # https://opendap.nccs.nasa.gov/dods/merra2_gmi/tavg1_2d_aer_Nx.info
@@ -13,7 +14,7 @@ add.daily.var.from.merra2.gmi = function(
         d, vname.in, dataset, vname.out,
         target.tz, bbox,
         download.dir, download.filename.fmt,
-        progress = F)
+        hours = 0:23, progress = F)
    {stopifnot(all(c("lon", "lat", "date") %in% names(d)))
 
     if (all(year(d$date) > merra2.max.year.utc))
@@ -69,8 +70,9 @@ add.daily.var.from.merra2.gmi = function(
                         return(T)})))
             out = sapply(1 : .N, function(i)
                {time.ix = which(
-                    as.Date(fetch.times, tz = target.tz) == date[i])
-                if (length(time.ix) < 24)
+                    as.Date(fetch.times, tz = target.tz) == date[i] &
+                    hour(fetch.times) %in% hours)
+                if (length(time.ix) < length(hours))
                   # We don't have a full day of observations because
                   # we're at the end of data availability.
                     NA_real_
