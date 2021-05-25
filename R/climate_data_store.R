@@ -1,5 +1,6 @@
 # Get a variable from the Climate Data Store and compute the daily
-# mean for each date and (lon, lat) pair in a data table.
+# mean for each date and (lon, lat) pair in a data table. Set `hours`
+# to use only a subset of hours (e.g., a single hour) for each date.
 #
 # Variable names and descriptions for one dataset can be found at
 # https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=overview
@@ -9,7 +10,7 @@ add.daily.var.from.climate.data.store = function(
         d, vname.in, dataset, vname.out,
         target.tz, area,
         download.dir, download.filename.fmt,
-        progress = F)
+        hours = 0:23, progress = F)
    {stopifnot(all(c("lon", "lat", "date") %in% colnames(d)))
     if (progress)
        {pbar = pbapply::startpb(max = length(unique(year(d$date))))
@@ -50,12 +51,15 @@ add.daily.var.from.climate.data.store = function(
             dl(the.year),
             if (the.year + 1 <= year(lubridate::today("UTC")))
                 dl(the.year + 1)[, 1:24, with = F]))
-        dates = as.Date(tz = target.tz, seq(
+        grid.datetimes = lubridate::with_tz(tz = target.tz, seq(
             lubridate::make_datetime(the.year - 1, 12, 31),
             lubridate::make_datetime(the.year + 1, 1, 1, 23),
-            by = "hour"))[1 : ncol(grid)]
-        out = sapply(1 : .N, function(i)
-            mean(grid[cell.ix[i], dates == date[i]]))
+            by = "hour")[1 : ncol(grid)])
+        grid.dates = lubridate::as_date(grid.datetimes)
+        grid.hours = hour(grid.datetimes)
+        out = sapply(1 : .N, function(i) mean(grid[
+            cell.ix[i],
+            grid.dates == date[i] & grid.hours %in% hours]))
         if (progress)
             pbapply::setpb(pbar, .GRP)
         out}]
