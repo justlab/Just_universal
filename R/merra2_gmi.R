@@ -48,7 +48,7 @@ add.daily.var.from.merra2.gmi = function(
            {fetch.times = m.ix$times[
                  year(m.ix$times) == the.year &
                  month(m.ix$times) == the.month]
-            e = raster::extract(y = cbind(lon, lat), x = stack(download.update.meta(
+            e = raster::extract(y = cbind(lon, lat), x = raster::stack(download.update.meta(
                 dir = download.dir,
                 to = sprintf(download.filename.fmt,
                     the.year, the.month),
