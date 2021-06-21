@@ -1,16 +1,21 @@
 #' @export
 repeated.idw.tables = function(
         locations,
-          # A matrix or data frame of points.
+          # A matrix or data frame of points. Each row is a point
+          # and each column is an axis of the coordinate system.
         is.source = T,
           # A logical vector of locations that can ever have
           # source data.
         maxdist = NULL,
           # Only consider source points closer than this distance to
           # each query point.
+        exponent = 2,
+          # The number by which to exponentiate all distances when
+          # computing weights.
         multiplier = 1,
-          # Multiply all squared distances by this number to help avoid
-          # floating-point problems due to very small or large weights.
+          # Multiply all exponentiated distances by this number to
+          # help avoid floating-point problems due to very small or
+          # large weights.
         source.subsetter = function(i) T)
           # A function that should take an index of `locations` and
           # return a logical vector indicating which elements of
@@ -30,9 +35,10 @@ repeated.idw.tables = function(
         si[!is.na(si)] = 1 : sum(!is.na(si))}
 
     minweight = if (is.null(maxdist)) 0 else
-        1/(maxdist^2 * multiplier)
+        1/(multiplier * maxdist^exponent)
     tables = lapply(1 : nrow(locations), function(i)
-       {weights = 1 / (colSums((source - locations[i,])^2) * multiplier)
+       {weights = 1 / (multiplier *
+           colSums((source - locations[i,])^2) ^ (exponent/2))
         w = which(weights > minweight & source.subsetter(i))
         cbind(w, weights[w], deparse.level = 0)})
     attr(tables, "si") = si

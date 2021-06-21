@@ -28,8 +28,9 @@ tests = function()
 
     # A test of cross-validation, using `obs.points` only.
     message("\n~~~~~ Cross-validation")
-    local(
-       {set.seed(400)
+    for (exponent in c(2, 0.5)) local(
+       {message("~~ Exponent ", exponent)
+        set.seed(400)
         locs = basegrid[obs.points]
         fold = sample(rep(1 : 10, len = nrow(locs)))
         observations = copy(observations)
@@ -39,6 +40,7 @@ tests = function()
         tables = repeated.idw.tables(
             locations = locs,
             maxdist = maxdist,
+            exponent = exponent,
             source.subsetter = function(i)
                 fold != fold[i])
 
@@ -63,6 +65,7 @@ tests = function()
                     data = train,
                     newdata = .SD,
                     maxdist = maxdist,
+                    idp = exponent,
                     debug.level = 0)[, "var1.pred"]
                 else
                     fallback}]}))
