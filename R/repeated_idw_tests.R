@@ -112,8 +112,7 @@ tests = function()
             group = time,
             outcome = value,
             make.prediction = make.prediction,
-            fallback = fallback,
-            progress = T)]))
+            fallback = fallback)]))
 
         message("gstat::idw")
         observations[, c("x", "y") := locations[li, .(x, y)]]
