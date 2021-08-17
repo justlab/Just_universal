@@ -247,11 +247,9 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
       xgbmod <- rfe.fit(X = train_mm, Y = as.matrix(Y[index_train[[i]],..y_var]), 
                         xgb_param = xgb_param_dart)
       # predicted y
-      y_pred_dt[index_test[[i]], y_pred:= predict(xgbmod, test_mm,
-                                                  ntreelimit = xgb_param_dart$nrounds)]
+      y_pred_dt[index_test[[i]], y_pred:= predict(xgbmod, test_mm)]
       # predicted SHAP
-      shap_pred <- as.data.table(predict(xgbmod, test_mm ,predcontrib = TRUE, approxcontrib = FALSE,
-                                         ntreelimit = xgb_param_dart$nrounds))
+      shap_pred <- as.data.table(predict(xgbmod, test_mm ,predcontrib = TRUE, approxcontrib = FALSE))
     }
     
     BIAS0[i] <- first(shap_pred$BIAS)

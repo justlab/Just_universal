@@ -64,8 +64,7 @@ xgboost.dart.cvtune = function(
             preds[
                 folds == fold.i,
                 y := predict(m,
-                    newdata = as.matrix(d[folds == fold.i, mget(ivs)]),
-                    ntreelimit = 1e6)]
+                    newdata = as.matrix(d[folds == fold.i, mget(ivs)]))]
             step <<- step + 1
             if (progress)
                 setTxtProgressBar(bar, step)}
@@ -79,7 +78,6 @@ xgboost.dart.cvtune = function(
     list(model = m, pred.fun = function(newdata, ...)
         predict(m,
             newdata = as.matrix(newdata[, mget(ivs)]),
-            ntreelimit = 1e6,
             ...))}
 
 #' @export
