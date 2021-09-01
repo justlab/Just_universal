@@ -68,6 +68,7 @@ run.k.fold.cv.rfe.wrap <- function(
   stn_var = NULL,
   day_var = NULL,
   run_param_cv = T,
+  progress = T,
   run_rfe = T, # optional to run rfe
   predict_whole_model = T # optional to predict using whole dataset
 )
@@ -113,7 +114,7 @@ run.k.fold.cv.rfe.wrap <- function(
   message("Run k-fold cv \n")
   cv_results <- run.k.fold.cv(sat = sat, k_fold=k_fold, run_param_cv = run_param_cv,
                               dataXY_df = dataXY0, by = by, n_rounds = n_rounds, 
-                              y_var = y_var,
+                              y_var = y_var, progress = progress,
                               index_train = index_train, index_test = index_test,
                               xgb_threads = xgb_threads)
   # write param list to global environment
@@ -149,6 +150,7 @@ run.k.fold.cv.rfe.wrap <- function(
                                     n_rounds = n_rounds,
                                     index_train = index_train,
                                     index_test = index_test,
+                                    progress = progress,
                                     xgb_threads = xgb_threads)
       }
     }
@@ -163,7 +165,7 @@ run.k.fold.cv.rfe.wrap <- function(
       rsxgb_whole <- xgboost.dart.cvtune(
         n.rounds = n_rounds,
         d = modeldt1, dv = y_var, ivs = var_selected,
-        progress = T, nthread = xgb_threads)
+        progress = progress, nthread = xgb_threads)
       xgb_param_dart <- rsxgb_whole$model$params
       xgbmod <- rsxgb_whole$model
       modeldt1[[y_var_pred_whole]] <-  rsxgb_whole$pred.fun(modeldt1)
@@ -196,10 +198,12 @@ run.k.fold.cv.rfe.wrap <- function(
 #' @param index_test index for testing
 #' @param xgb_threads xgb_threads passed from parent function
 #' @param by sting of "stn" or "day" passed from parent function 
+#' @param progress whether to show progress bars, default TRUE
 #' @param ... other arguments
 #'
 run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
-                          index_train, index_test, xgb_threads, by, n_rounds, ...){
+                          index_train, index_test, xgb_threads, by, n_rounds, 
+                          progress = TRUE, ...){
   y_var_pred <- paste0(y_var, "_pred") # name of the predicted y
   Y <-  dataXY_df[,..y_var]
   data_X <- dataXY_df[, -..y_var]
@@ -225,7 +229,7 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
         # by default, gives 100 rounds, and it is enough by experience
         n.rounds = n_rounds,
         d = dataXY_df[index_train[[i]],], dv = y_var, ivs = colnames(data_X),
-        progress = T, nthread = xgb_threads)
+        progress = progress, nthread = xgb_threads)
       # manually select and store some params
       xgb_param_dart <- c(rsxgb0$model$params[c(1,2,4, 6:11)], nrounds = rsxgb0$model$niter)
       xgbmod <- rsxgb0$model
