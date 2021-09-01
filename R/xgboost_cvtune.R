@@ -12,18 +12,17 @@ xgboost.dart.cvtune = function(
         d, dv, ivs,
         n.rounds,
         weight.v = NULL,
-        objective = "reg:linear",
+        objective = "reg:squarederror",
         eval_metric = "rmse",
         n.param.vectors = 50L,
         n.folds = 2L,  # Ignored if `folds` is set.
         folds = NULL,
         progress = F,
-        ...)
+        ...){
+  xgboost.extra = list(...)
 
-   {xgboost.extra = list(...)
-
-    if (objective != "reg:linear" || eval_metric != "rmse")
-        stop('Not yet implemented')
+    if (objective != "reg:squarederror" || eval_metric != "rmse")
+       stop('Not yet implemented')
     eval_metric_f = function(x, y, weights = NULL)
         sqrt(
             if (is.null(weights))
