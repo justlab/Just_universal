@@ -6,6 +6,7 @@ Imports:
     data.table,
     DBI,
     digest,
+    future,
     fst,
     ggplot2,
     gstat,

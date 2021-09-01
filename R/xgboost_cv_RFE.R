@@ -282,11 +282,7 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
 #' internal function to get threads to use
 #'
 get.threads <- function(){
-  xgb_threads = (
-    if (Sys.info()["nodename"] == "belle") 12
-    else if (Sys.info()["nodename"] == "coco") 24
-    else 4) - 3
-  return(xgb_threads)
+  future::availableCores()/2
 }
 
 #' A wrapped function to run xgboost model.
@@ -301,7 +297,7 @@ rfe.fit <- function(X, Y, xgb_param){
   if (!is.null(xgb_param$seed)) set.seed(xgb_param$seed) else set.seed(1234)
   xgb_threads <- get.threads()
   # message(paste("xgb_param is", unlist(xgb_param)))
-  xgbmod <- xgboost(data = as.matrix(X),
+  xgbmod <- xgboost::xgboost(data = as.matrix(X),
                     label = as.matrix(Y),
                     params = xgb_param,
                     nrounds = xgb_param$nrounds,
