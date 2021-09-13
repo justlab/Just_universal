@@ -56,7 +56,7 @@ xgboost.dart.cvtune = function(
         bar = txtProgressBar(min = 0, max = bar.steps, style = 3)}
 
     step = 0
-    design_scores = lapply(1 : nrow(design), function(design.i)
+    best.design.i = which.min(lapply(1 : nrow(design), function(design.i)
        {preds = data.table(y = rep(NA_real_, nrow(d)))
         for (fold.i in sort(unique(folds)))
            {m = fit(d[folds != fold.i], design[design.i], fast = T)
@@ -68,8 +68,7 @@ xgboost.dart.cvtune = function(
             if (progress)
                 setTxtProgressBar(bar, step)}
         eval_metric_f(preds$y, d[[dv]],
-            (if (is.null(weight.v)) NULL else d[[weight.v]]))})
-    best.design.i = which.min(design_scores)
+            (if (is.null(weight.v)) NULL else d[[weight.v]]))}))
     if(length(best.design.i) == 0) stop('No best design, probably NA values in data.')
     m = fit(d, design[best.design.i])
     if (progress)
