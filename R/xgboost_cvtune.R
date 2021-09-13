@@ -69,7 +69,8 @@ xgboost.dart.cvtune = function(
                 setTxtProgressBar(bar, step)}
         eval_metric_f(preds$y, d[[dv]],
             (if (is.null(weight.v)) NULL else d[[weight.v]]))}))
-    if(length(best.design.i) == 0) stop('No best design, probably NA values in data.')
+    if (length(best.design.i) == 0)
+        stop('No best design, probably NA values in data.')
     m = fit(d, design[best.design.i])
     if (progress)
        {setTxtProgressBar(bar, bar.steps)
