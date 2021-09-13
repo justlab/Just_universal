@@ -19,7 +19,7 @@ xgboost.dart.cvtune = function(
         folds = NULL,
         progress = F,
         ...){
-  xgboost.extra = list(...)
+    xgboost.extra = list(...)
 
     if (objective != "reg:squarederror" || eval_metric != "rmse")
        stop('Not yet implemented')
