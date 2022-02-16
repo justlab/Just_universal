@@ -21,14 +21,23 @@ xgboost.dart.cvtune = function(
         ...){
     xgboost.extra = list(...)
 
-    if (objective != "reg:squarederror" || eval_metric != "rmse")
-       stop('Not yet implemented')
-    eval_metric_f = function(x, y, weights = NULL)
-        sqrt(
+    assert(objective %in% c("reg:squarederror", "logcosh"))
+    assert(eval_metric %in% c("rmse", "mae"))
+
+    if (objective == "logcosh")
+       objective = logcosh.objective
+
+    eval_metric_f = function(x, y, weights = NULL) switch(eval_metric,
+        rmse = sqrt(
             if (is.null(weights))
                 mean((x - y)^2)
             else
-                sum((x - y)^2 * weights) / sum(weights))
+                sum((x - y)^2 * weights) / sum(weights)),
+        mae =
+            if (is.null(weights))
+                mean(abs(x - y))
+            else
+                sum(abs(x - y) * weights) / sum(weights))
 
     design = hyperparam.set(n.param.vectors)
 
@@ -106,8 +115,16 @@ hyperparam.set = function(n.param.vectors){
            design[, (dcol) := signif(get(dcol), 2)]}
     unique(design)}
 
+logcosh.objective = function(preds, dtrain)
+  # log(cosh(residuals)) is an everywhere twice-differentiable
+  # loss function that approximates abs(residuals).
+   {e = preds - getinfo(dtrain, "label")
+    # The derivative of log(cosh(x)) is tanh(x), and the
+    # derivative of tanh(x) is sech(x)^2 = 1/cosh(x)^2.
+    list(grad = tanh(e), hess = 1/cosh(e)^2)}
+
 #' @import data.table
-xgboost.dart.cvtune.example = function(weighted = F)
+xgboost.dart.cvtune.example = function(absolute = F, weighted = F)
    {xgb.threads = 10
 
     set.seed(5)
@@ -125,6 +142,8 @@ xgboost.dart.cvtune.example = function(weighted = F)
         dv = "y", ivs = c("x1", "x2", "x3"),
         weight.v = (if (weighted) "weight" else NULL),
         n.rounds = 10,
+        objective = (if (absolute) "logcosh" else "reg:squarederror"),
+        eval_metric = (if (absolute) "mae" else "rmse"),
         progress = T,
         nthread = xgb.threads)
 
