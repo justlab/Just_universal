@@ -6,7 +6,7 @@ This R package contains a variety of utility code for work in Allan Just's lab a
 License
 ============================================================
 
-This program is copyright 2018, 2019, 2020, 2021 Kodi Arfer and Yang Liu.
+This program is copyright 2018, 2019, 2020, 2021, 2022 Kodi Arfer and Yang Liu.
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
