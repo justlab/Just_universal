@@ -1,3 +1,6 @@
+if (!exists("earthdata_web_dir_cache"))
+    earthdata_web_dir_cache  = new.env(parent = emptyenv())
+
 #' @export
 get.earthdata = function(root.dir, product, satellites, tiles, dates)
   # Download the requested Earthdata satellite product (as an HDF
@@ -34,7 +37,8 @@ get.earthdata = function(root.dir, product, satellites, tiles, dates)
             MxD13A3.006 = "MOLA"),
         str_replace(product, "x", switch(paste(satellite),
             terra = "O",
-            aqua = "Y")),
+            aqua = "Y",
+            "")),
         year(date), month(date), mday(date)))
 
     # Enumerate the files to be downloaded.
