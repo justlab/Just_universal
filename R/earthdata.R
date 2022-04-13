@@ -78,7 +78,7 @@ get.earthdata = function(root.dir, product, satellites, tiles, dates)
                 assert(0 == system2("curl", shQuote(c(
                     paste0(dir.url, "/", remote.name),
                     "--silent", "--show-error", "--fail", "--remote-time",
-                    "--retry", 3,
+                    "--retry", 10,
                     "--output", path,
                     earthdata.creds()))))
             else if (length(remote.name) == 0)
