@@ -18,15 +18,15 @@ get.earthdata = function(root.dir, product, satellites, tiles, dates)
    {# Check and normalize arguments.
     assert(dir.exists(root.dir))
     assert(length(product) == 1)
-    assert(product %in% c("MCD19A2.006", "MxD13A3.006"))
-    monthly = product == "MxD13A3.006"
+    assert(product %in% c("MCD19A2.006", "MxD13A3.061"))
+    monthly = product == "MxD13A3.061"
     if (monthly)
         dates = lubridate::floor_date(dates, "month")
     for (vname in c("satellites", "tiles", "dates"))
         assign(vname, unique(get(vname)))
     assert(all(satellites %in% switch(product,
         MCD19A2.006 = "terra.and.aqua",
-        MxD13A3.006 = c("terra", "aqua"))))
+        MxD13A3.061 = c("terra", "aqua"))))
     assert(all(str_detect(tiles, "\\Ah[0-9][0-9]v[0-9][0-9]\\z")))
 
     # Set the URL format.
@@ -34,7 +34,7 @@ get.earthdata = function(root.dir, product, satellites, tiles, dates)
         "https://e4ftl01.cr.usgs.gov/%s/%s/%04d.%02d.%02d",
         switch(product,
             MCD19A2.006 = "MOTA",
-            MxD13A3.006 = "MOLA"),
+            MxD13A3.061 = "MOLA"),
         str_replace(product, "x", switch(paste(satellite),
             terra = "O",
             aqua = "Y",
