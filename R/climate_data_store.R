@@ -34,7 +34,7 @@ add.daily.var.from.climate.data.store = function(
           # Set `cell.ix` to NA when the location isn't actually
           # inside the cell.
             abs(lon - coord[cell.ix, X]) >
-                median(diff(sort(unique(coord$X)))) ||
+                median(diff(sort(unique(coord$X)))) |
             abs(lat - coord[cell.ix, Y]) >
                 median(diff(sort(unique(coord$Y))))] = NA_integer_
         # Get the 24 hours before and after this year for time-zone
