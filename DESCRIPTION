@@ -15,6 +15,7 @@ Imports:
     lhs,
     lubridate,
     mlr,
+    pbapply,
     qs,
     readr,
     rmarkdown,
