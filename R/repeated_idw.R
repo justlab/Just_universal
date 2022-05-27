@@ -48,16 +48,15 @@ repeated.idw.tables = function(
 #' @export
 repeated.idw = function(tables, li, group, outcome,
         make.prediction = T, fallback = NA_real_,
-        future = F)
+        n.workers = 1L)
    {d = data.table::data.table(li, group, outcome, make.prediction)
     if (nrow(d[!is.na(outcome), by = .(li, group), if (.N > 1) 1]))
         stop("repeated.idw: Detected more than one non-NA value for a single (li, group) pair")
     si = attr(tables, "si")
 
     d[, dix := .I]
-    f = (if (future)
-        function(...) future.apply::future_lapply(
-            future.seed = T, ...) else
+    f = (if (n.workers > 1L)
+        function(...) parallel::mclapply(mc.cores = n.workers, ...) else
         lapply)
 
     d = rbindlist(f(split(by = "group", d), function(chunk)
