@@ -11,7 +11,7 @@ convert.crs = function(d, from, to, sf = F)
   # Given a 2-column data frame or matrix of points in the CRS `from`,
   # return a data table with columns "x" and "y" in the CRS `to`, or
   # an `sf` object if `sf` is true.
-   {assert(length(colnames(d)) == 2)
+   {assert(ncol(d) == 2)
     orig = as.data.table(d)
     setnames(orig, c("x", "y"))
     orig[, by = .(x, y), index := .GRP]
