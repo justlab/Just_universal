@@ -13,56 +13,51 @@ add.daily.var.from.climate.data.store = function(
         hours = 0:23, progress = F)
    {stopifnot(all(c("lon", "lat", "date") %in% colnames(d)))
     if (progress)
-       {pbar = pbapply::startpb(max = length(unique(year(d$date))))
+       {pbar = pbapply::startpb(max = length(unique(d$date)))
         if (is.null(pbar))
             progress = F}
-    st.data = function(y)
-        st_as_sf(rgdal::readGDAL(silent = T,
-            climate.data.store.file(
-                y, area, vname.in, dataset,
-                download.dir, download.filename.fmt)))
-    d[, by = .(the.year = year(date)), (vname.out) :=
+
+    rasts = as.environment(sapply(simplify = F,
+        as.character(
+           (min(year(d$date)) - 1) :
+           min(lubridate::today("UTC"), max(year(d$date)) + 1)),
+        function(y) terra::rast(climate.data.store.file(
+            as.integer(y), area, vname.in, dataset,
+            download.dir, download.filename.fmt))))
+
+    d[, cds.cell.ix := terra::cellFromXY(
+        rasts[[as.character(min(year(d$date)))]],
+        cbind(d$lon, d$lat))]
+
+    d[, by = date, (vname.out) :=
       # The data is grouped into one raster by year with one band per
       # UTC hour. For each location, take the mean of all hours on the
       # requested date in `target.tz`.
-       {coord = as.data.table(st_coordinates(st.data(the.year)))
-        # Find which cell of the grid corresponds to each (lon, lat)
-        # pair.
-        cell.ix = sapply(1 : .N, function(i)
-            which.min((lon[i] - coord$X)^2 + (lat[i] - coord$Y)^2))
-        cell.ix[
-          # Set `cell.ix` to NA when the location isn't actually
-          # inside the cell.
-            abs(lon - coord[cell.ix, X]) >
-                median(diff(sort(unique(coord$X)))) |
-            abs(lat - coord[cell.ix, Y]) >
-                median(diff(sort(unique(coord$Y))))] = NA_integer_
-        # Get the 24 hours before and after this year for time-zone
-        # issues.
-        dl = function(y)
-           {x = as.data.table(st.data(y))[, -"geometry"]
-            # CDS has a bug where it sometimes returns extra all-NA
-            # bands. Drop them.
-            x[, with = F, which(
-               sapply(x, function(col) !all(is.na(col))))]}
-        prev = dl(the.year - 1)
-        grid = as.matrix(cbind(
-            prev[, mget(tail(names(prev), 24))],
-            dl(the.year),
-            if (the.year + 1 <= year(lubridate::today("UTC")))
-                dl(the.year + 1)[, 1:24, with = F]))
-        grid.datetimes = lubridate::with_tz(tz = target.tz, seq(
-            lubridate::make_datetime(the.year - 1, 12, 31),
-            lubridate::make_datetime(the.year + 1, 1, 1, 23),
-            by = "hour")[1 : ncol(grid)])
-        grid.dates = lubridate::as_date(grid.datetimes)
-        grid.hours = hour(grid.datetimes)
-        out = sapply(1 : .N, function(i) mean(grid[
-            cell.ix[i],
-            grid.dates == date[i] & grid.hours %in% hours]))
+       {datetimes = lubridate::with_tz(tz = "UTC", lubridate::make_datetime(
+            year(date), month(date), mday(date),
+            hours, tz = target.tz))
+        values = do.call(cbind, lapply(-1 : 1, function(yi)
+          # We have to look at the previous and next year for
+          # time-zone issues.
+             {r = rasts[[as.character(year(date) + yi)]]
+              if (is.null(r))
+                  NULL
+              else
+                 {i = as.integer(na.omit(match(datetimes, terra::time(r))))
+                  if (length(i))
+                      as.data.table(terra::extract(r[[i]], cds.cell.ix))
+                  else
+                      NULL}}))
+        out = (
+            if (!is.null(values) && ncol(values) == length(hours))
+                rowMeans(values)
+            else
+                NA_real_)
         if (progress)
             pbapply::setpb(pbar, .GRP)
         out}]
+
+    d[, cds.cell.ix := NULL]
     if (progress)
         close(pbar)}
 
