@@ -99,4 +99,5 @@ earthdata.creds = function()
         stop("You need to set the environment variables EARTHDATA_USERNAME and EARTHDATA_PASSWORD. If you don't have an account, you can get one at https://urs.earthdata.nasa.gov/users/new . You may also need to approve the \"NASA GESDISC DATA ARCHIVE\" and \"SEDAC Website\" applications; see https://disc.gsfc.nasa.gov/earthdata-login for instructions.")
     c("--user", paste0(collapse = ":", creds),
         "--cookie", "",
+        "--anyauth",
         "--location-trusted")}
