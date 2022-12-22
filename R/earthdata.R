@@ -64,16 +64,24 @@ get.earthdata = function(root.dir, product, satellites, tiles, dates)
             # lists it.
             k = as.character(date)
             if (!(k %in% names(earthdata_web_dir_cache)))
-               {r = system2("curl", stdout = T, shQuote(c(
-                    dir.url,
-                    "--silent", "--show-error", "--fail",
-                    earthdata.creds())))
-                assert(is.null(attr(r, "status")))
-                earthdata_web_dir_cache[[k]] = str_match_all(
-                    paste(r, collapse = ""),
-                    '<a href="([^"]+\\.hdf)"')[[1]][,2]}
-            remote.name = str_subset(earthdata_web_dir_cache[[k]],
-                as.character(tile))
+               {r = suppressWarnings(system2("curl",
+                    stdout = T, stderr = T, shQuote(c(
+                        dir.url,
+                        "--silent", "--show-error", "--fail",
+                        earthdata.creds()))))
+                if (attr(r, "status") == 22L && all(str_detect(r, "404 Not Found")))
+                  # This date has no directory, because it has no
+                  # data.
+                     earthdata_web_dir_cache[[k]] = "nothing"
+                else
+                    {assert(is.null(attr(r, "status")))
+                     earthdata_web_dir_cache[[k]] = str_match_all(
+                         paste(r, collapse = ""),
+                         '<a href="([^"]+\\.hdf)"')[[1]][,2]}}
+            remote.name = (if (identical(earthdata_web_dir_cache[[k]], "nothing"))
+                character() else
+                str_subset(earthdata_web_dir_cache[[k]],
+                    as.character(tile)))
 
             dir.create(dirname(path), showWarnings = F, recursive = T)
             if (length(remote.name) == 1)
