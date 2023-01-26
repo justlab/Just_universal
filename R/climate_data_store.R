@@ -11,7 +11,7 @@ add.daily.var.from.climate.data.store = function(
         target.tz, area,
         download.dir, download.filename.fmt,
         hours = 0:23, progress = F)
-   {stopifnot(all(c("lon", "lat", "date") %in% colnames(d)))
+   {assert(all(c("lon", "lat", "date") %in% colnames(d)))
     if (progress)
        {pbar = pbapply::startpb(max = length(unique(d$date)))
         if (is.null(pbar))
