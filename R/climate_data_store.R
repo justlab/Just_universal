@@ -12,10 +12,6 @@ add.daily.var.from.climate.data.store = function(
         download.dir, download.filename.fmt,
         hours = 0:23, progress = F)
    {assert(all(c("lon", "lat", "date") %in% colnames(d)))
-    if (progress)
-       {pbar = pbapply::startpb(max = length(unique(d$date)))
-        if (is.null(pbar))
-            progress = F}
 
     rasts = as.environment(sapply(simplify = F,
         as.character(
@@ -29,6 +25,10 @@ add.daily.var.from.climate.data.store = function(
         rasts[[as.character(min(year(d$date)))]],
         cbind(d$lon, d$lat))]
 
+    if (progress)
+       {pbar = pbapply::startpb(max = length(unique(d$date)))
+        if (is.null(pbar))
+            progress = F}
     d[, by = date, (vname.out) :=
       # The data is grouped into one raster by year with one band per
       # UTC hour. For each location, take the mean of all hours on the
