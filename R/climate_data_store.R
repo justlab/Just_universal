@@ -78,7 +78,7 @@ add.daily.var.from.climate.data.store = function(
             else
                {i = as.integer(na.omit(match(datetimes, terra::time(r))))
                 if (length(i))
-                    as.data.table(terra::extract(r[[i]], cds.cell.ix))
+                    data.table::as.data.table(terra::extract(r[[i]], cds.cell.ix))
                 else
                     NULL}}))
         out = (

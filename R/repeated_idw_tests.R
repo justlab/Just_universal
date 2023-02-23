@@ -5,7 +5,7 @@ tests = function()
     repeated.idw.tables = Just.universal::repeated.idw.tables
 
     message("Generating data")
-    basegrid = as.data.table(expand.grid(
+    basegrid = data.table::as.data.table(expand.grid(
         x = seq(0, 1, len = 1000),
         y = seq(0, 1, len = 1000)))
     maxdist = .1
@@ -14,7 +14,7 @@ tests = function()
     times = 1 : 25
     lonely.time = length(times)
     time.effect = rnorm(length(times), sd = 5)
-    observations = rbindlist(lapply(times, function(tim) data.table(
+    observations = rbindlist(lapply(times, function(tim) data.table::data.table(
         li = sample(obs.points,
           # Provide only observation for one timepoint, but a bunch
           # of observations for all the others.
@@ -87,7 +87,7 @@ tests = function()
             sample(rep(1 : 10, len = length(obs.points)))
         fallback = mean(observations$value)
         observations = rbind(fill = T, observations, fsetdiff(
-            rbindlist(lapply(times, function(tim) data.table(
+            rbindlist(lapply(times, function(tim) data.table::data.table(
                 li = locations$bi,
                 time = tim))),
             observations[, .(li, time)]))
@@ -148,7 +148,7 @@ tests = function()
 
     # Test for a bug involving duplicate (li, group) pairs.
     message("\n~~~~~ Duplicate (li, group) pairs")
-    d = data.table(
+    d = data.table::data.table(
         x = c(0, 1, 2, 3),
         y = c(0, 0, 1, 0),
         v = c(5, 10, 15, 20))
@@ -169,7 +169,7 @@ tests = function()
     message("Passed")
 
     message("\n~~~~~ Self-interpolation")
-    d = data.table(
+    d = data.table::data.table(
         x = c(0, 1, 2),
         y = c(0, 0, 1),
         v = c(5, 10, NA))

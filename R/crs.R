@@ -12,7 +12,7 @@ convert.crs = function(d, from, to, sf = F)
   # return a data table with columns "x" and "y" in the CRS `to`, or
   # an `sf` object if `sf` is true.
    {assert(ncol(d) == 2)
-    orig = as.data.table(d)
+    orig = data.table::as.data.table(d)
     setnames(orig, c("x", "y"))
     orig[, by = .(x, y), index := .GRP]
     result = sf::st_transform(crs = to, sf::st_as_sf(
@@ -21,5 +21,5 @@ convert.crs = function(d, from, to, sf = F)
     if (sf)
         result[orig$index,]
     else
-        as.data.table(`colnames<-`(value = c("x", "y"),
+        data.table::as.data.table(`colnames<-`(value = c("x", "y"),
             sf::st_coordinates(result)))[orig$index]}

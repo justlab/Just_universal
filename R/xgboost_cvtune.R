@@ -7,7 +7,6 @@
 # improving performance a little bit.
 
 #' @export
-#' @import data.table
 xgboost.dart.cvtune = function(
         d, dv, ivs,
         n.rounds,
@@ -66,7 +65,7 @@ xgboost.dart.cvtune = function(
 
     step = 0
     best.design.i = which.min(lapply(1 : nrow(design), function(design.i)
-       {preds = data.table(y = rep(NA_real_, nrow(d)))
+       {preds = data.table::data.table(y = rep(NA_real_, nrow(d)))
         for (fold.i in sort(unique(folds)))
            {m = fit(d[folds != fold.i], design[design.i], fast = T)
             preds[
@@ -90,18 +89,19 @@ xgboost.dart.cvtune = function(
             ...))}
 
 #' @export
-#' @import ParamHelpers
 hyperparam.set = function(n.param.vectors){
+    Numeric = ParamHelpers::makeNumericParam
+    Discrete = ParamHelpers::makeDiscreteParam
     pow2 = function(x) 2^x
-    ps = makeParamSet(
+    ps = ParamHelpers::makeParamSet(
         # Based on autoxgboost's defaults.
-        makeNumericParam("eta", lower = .01, upper = .5),
-        makeNumericParam("gamma", lower = -7, upper = 6, trafo = pow2),
-        makeNumericParam("lambda", lower = -10, upper = 10, trafo = pow2),
-        makeNumericParam("alpha", lower = -10, upper = 10, trafo = pow2),
-        makeDiscreteParam("max_depth", values = c(3, 6, 9)),
-        makeDiscreteParam("rate_drop", values = c(0, .01, .025, .05)))
-    design = as.data.table(
+        Numeric("eta", lower = .01, upper = .5),
+        Numeric("gamma", lower = -7, upper = 6, trafo = pow2),
+        Numeric("lambda", lower = -10, upper = 10, trafo = pow2),
+        Numeric("alpha", lower = -10, upper = 10, trafo = pow2),
+        Discrete("max_depth", values = c(3, 6, 9)),
+        Discrete("rate_drop", values = c(0, .01, .025, .05)))
+    design = data.table::as.data.table(
         Just.universal::with.temp.seed(as.integer(n.param.vectors), generateDesign(
             n.param.vectors, par.set = ps, trafo = T,
             fun = lhs::maximinLHS)))
@@ -123,13 +123,12 @@ logcosh.objective = function(preds, dtrain)
     # derivative of tanh(x) is sech(x)^2 = 1/cosh(x)^2.
     list(grad = tanh(e), hess = 1/cosh(e)^2)}
 
-#' @import data.table
 xgboost.dart.cvtune.example = function(absolute = F, weighted = F)
    {xgb.threads = 10
 
     set.seed(5)
     N = 2000
-    d = transform(data.table(
+    d = transform(data.table::data.table(
         x1 = rnorm(N),
         x2 = rnorm(N),
         x3 = rnorm(N)),

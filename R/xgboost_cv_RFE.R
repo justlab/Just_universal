@@ -18,12 +18,6 @@
 #' use random search by `xgboost.dart.cvtune`.
 #'
 #'
-#' @importFrom stats as.formula cor lm na.omit predict var
-#' @import xgboost
-#' @import data.table
-#' @import here
-#'
-#'
 #' @param data the dataset
 #' @param sat Name of the satellite, just for labelling purpose, for example "terra", or just "".
 #' @param y_var the y variables, for example y_var = "AOD_diff"
@@ -121,8 +115,8 @@ run.k.fold.cv.rfe.wrap <- function(
   # so in rfe process there is no need to run param search
   xgb_param_list_full <- cv_results$xgb_param_list2
   # save to drive instead of using <<- to send to global. Not recommended in funcs.
-  if (!dir.exists(here("Intermediate"))) dir.create(here("Intermediate"))
-  saveRDS(xgb_param_list_full, here("Intermediate", "xgb_param_list_full.rds"))
+  if (!dir.exists(here::here("Intermediate"))) dir.create(here::here("Intermediate"))
+  saveRDS(xgb_param_list_full, here::here("Intermediate", "xgb_param_list_full.rds"))
   cv_results_full_model <- cv_results
   modeldt1 <-  cbind(modeldt1, cv_results$y_pred_dt)
   
@@ -213,8 +207,8 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
   
   
   # output dataset
-  y_pred_dt <- data.table(y_pred = rep(NA_real_, n_row))
-  shap_score <- as.data.table(matrix(rep(NA_real_,n_row*n_col),ncol = n_col))
+  y_pred_dt <- data.table::data.table(y_pred = rep(NA_real_, n_row))
+  shap_score <- data.table::as.data.table(matrix(rep(NA_real_,n_row*n_col),ncol = n_col))
   names(shap_score) <- names(data_X)
   xgb_param_list1 <- xgb_param_list2 <- list()
   BIAS0 <- rep(NA_real_, k_fold)
@@ -240,11 +234,11 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
       # fit model
       y_pred_dt[index_test[[i]], y_pred:= rsxgb0$pred.fun(dataXY_df[index_test[[i]],])] # record the predicted cwv_diff
       # predicted SHAP
-      shap_pred <- as.data.table(rsxgb0$pred.fun(dataXY_df[index_test[[i]],],
+      shap_pred <- data.table::as.data.table(rsxgb0$pred.fun(dataXY_df[index_test[[i]],],
                                                  predcontrib = TRUE, approxcontrib = FALSE))
     } else {
       # use already obtained param to fit the model (old way)
-      xgb_param_list_full <- readRDS(here("Intermediate", "xgb_param_list_full.rds"))
+      xgb_param_list_full <- readRDS(here::here("Intermediate", "xgb_param_list_full.rds"))
       xgb_param_dart <- xgb_param_list_full[[paste0(by, i)]]
       train_mm <- as.matrix(data_X[index_train[[i]],])
       test_mm <- as.matrix(data_X[index_test[[i]],]) # features do not contain Y variable
@@ -253,7 +247,7 @@ run.k.fold.cv <- function(sat, k_fold, run_param_cv, dataXY_df, y_var,
       # predicted y
       y_pred_dt[index_test[[i]], y_pred:= predict(xgbmod, test_mm)]
       # predicted SHAP
-      shap_pred <- as.data.table(predict(xgbmod, test_mm ,predcontrib = TRUE, approxcontrib = FALSE))
+      shap_pred <- data.table::as.data.table(predict(xgbmod, test_mm ,predcontrib = TRUE, approxcontrib = FALSE))
     }
     
     BIAS0[i] <- first(shap_pred$BIAS)
@@ -290,7 +284,6 @@ get.threads <- function(){
 #' @param X predictors, Notice that **should NOT contains Y**.
 #' @param Y dependent variable Y.
 #' @param xgb_param a list of hyperparameters selected, contains nrounds
-#' @importFrom  xgboost xgboost
 #' @return xgboost model object
 #'
 rfe.fit <- function(X, Y, xgb_param){
@@ -346,7 +339,6 @@ prepare.bin <- function(modeldt1, by, k_fold){
 #'
 #' @param object.sizes a vector of object size
 #' @param n.bins number of bins (e.g. 5 folders )
-#' @import data.table
 #' @export helper.pack.bins
 #' @return a vector of group assignment
 #' @examples helper.pack.bins(seq(1:10), n.bins = 4)
@@ -402,21 +394,20 @@ report.r.squared <- function(dataXY, nround = 2){
 #' Show RFE results: make plots of rmse for new RFE.
 #' updated on (19.04.06). only one line is plotted.
 #' @param rmse_rfe use rferesults$rmse_rfe
-#' @import ggplot2
 #' 
 #' @return ggplot2 object
 #' @export rfe.rmse.plot
 rfe.rmse.plot <- function(rmse_rfe = rferesults$rmse_rfe){
-  rmse_rfe_dt <- data.table(x = 1:length(rmse_rfe),
-                            y = rmse_rfe)
+  rmse_rfe_dt <- data.table::data.table(x = 1:length(rmse_rfe),
+                                        y = rmse_rfe)
   n_min <- which.min(rmse_rfe)
   ggplot2::ggplot(data = rmse_rfe_dt, aes(x=x, y=y)) +
-    geom_point() +
-    geom_line(size = 0.5) +
-    labs(x = "Number of Features",
-         y = "Testing rmse from all folds of CV", color = "", group = "") +
-    geom_vline(xintercept = n_min, size = 0.3, linetype = 2) +
-    theme_bw()
+    ggplot2::geom_point() +
+    ggplot2::geom_line(size = 0.5) +
+    ggplot2::labs(x = "Number of Features",
+                  y = "Testing rmse from all folds of CV", color = "", group = "") +
+    ggplot2::geom_vline(xintercept = n_min, size = 0.3, linetype = 2) +
+    ggplot2::theme_bw()
 }
 
 

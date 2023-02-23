@@ -25,7 +25,6 @@ square.xyd = function(x, y, d)
        x + d/2, y + d/2)))) # NE
 
 #' @export
-#' @import data.table
 patchwork.regionalize = function(x, y, n.regions)
   # Given cells in a square grid, provided by `x` and `y`
   # vectors, split the area into `n.regions` regions that are
@@ -36,7 +35,7 @@ patchwork.regionalize = function(x, y, n.regions)
    {stopifnot(length(x) == length(y))
     stopifnot(n.regions <= length(x))
 
-    mg = data.table(
+    mg = data.table::data.table(
         x = 1 + round((x - min(x)) / median(diff(sort(unique(x))))),
         y = 1 + round((y - min(y)) / median(diff(sort(unique(y))))))
     stopifnot(nrow(unique(mg)) == nrow(mg))

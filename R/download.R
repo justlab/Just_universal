@@ -1,5 +1,4 @@
 #' @export
-#' @import DBI
 download.update.meta = function(
         from, dir, to = basename(from), curl = character(),
         decompress = NULL)
@@ -26,7 +25,12 @@ download.update.meta = function(
         stop(paste0("Unknown compression format: ", decompress)))
 
     if (!file.exists(to.path))
-       {temp.to.path = paste0(to.path,
+       {# Make sure we have dependencies before downloading the file.
+        loadNamespace("DBI")
+        loadNamespace("RSQLite")
+        loadNamespace("digest")
+
+        temp.to.path = paste0(to.path,
              if (!is.null(decompress)) paste0(".", decompress))
         stopifnot(if (is.function(from)) from(to.path) else 0 ==
             system2("curl", shQuote(c(
@@ -39,12 +43,12 @@ download.update.meta = function(
             stopifnot(0 == system2(decompression.program,
                 shQuote(temp.to.path)))
 
-        meta = dbConnect(RSQLite::SQLite(), file.path(dir, "meta.sqlite"))
-        on.exit(dbDisconnect(meta))
-        if (!as.integer(dbGetQuery(meta,
+        meta = DBI::dbConnect(RSQLite::SQLite(), file.path(dir, "meta.sqlite"))
+        on.exit(DBI::dbDisconnect(meta))
+        if (!as.integer(DBI::dbGetQuery(meta,
                 "select count(*) from sqlite_master where type = 'table'")))
-           {dbExecute(meta, "pragma journal_mode = wal")
-            dbExecute(meta, "create table Downloads
+           {DBI::dbExecute(meta, "pragma journal_mode = wal")
+            DBI::dbExecute(meta, "create table Downloads
                (file             text primary key,
                 url              text,
                 time_downloaded  integer,
@@ -64,8 +68,8 @@ append.or.replace.one.row = function(db, table.name, l)
   # We can't just use `dbAppendTable` because one of the columns
   # has to be a list, and data frames can't have lists as columns;
   # furthermore, we want `insert or replace`, not just `insert`.
-    dbExecute(db,
+    DBI::dbExecute(db,
          sub("INSERT", "INSERT OR REPLACE",
-            sqlAppendTableTemplate(db, table.name, row.names = F,
+            DBI::sqlAppendTableTemplate(db, table.name, row.names = F,
                 `colnames<-`(data.frame(t(rep(1, length(l)))), names(l)))),
         unname(l))

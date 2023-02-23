@@ -45,7 +45,7 @@ get.earthdata = function(root.dir, product, satellites, tiles, dates)
         year(date), month(date), mday(date)))
 
     # Enumerate the files to be downloaded.
-    files = CJ(
+    files = data.table::CJ(
         satellite = factor(satellites),
         date = dates,
         tile = factor(tiles))
