@@ -1,3 +1,5 @@
+.datatable.aware = TRUE
+
 #' @export
 assert = stopifnot
 
