@@ -102,7 +102,7 @@ hyperparam.set = function(n.param.vectors){
         Discrete("max_depth", values = c(3, 6, 9)),
         Discrete("rate_drop", values = c(0, .01, .025, .05)))
     design = data.table::as.data.table(
-        Just.universal::with.temp.seed(as.integer(n.param.vectors), generateDesign(
+        Just.universal::with.temp.seed(as.integer(n.param.vectors), ParamHelpers::generateDesign(
             n.param.vectors, par.set = ps, trafo = T,
             fun = lhs::maximinLHS)))
     for (dcol in colnames(design))
