@@ -83,10 +83,13 @@ xgboost.dart.cvtune = function(
     if (progress)
        {setTxtProgressBar(bar, bar.steps)
         close(bar)}
-    list(model = m, pred.fun = function(newdata, ...)
-        predict(m,
-            newdata = as.matrix(newdata[, mget(ivs)]),
-            ...))}
+    list(
+        hyperparams = design[best.design.i],
+        model = m,
+        pred.fun = function(newdata, ...)
+            predict(m,
+                newdata = as.matrix(newdata[, mget(ivs)]),
+                ...))}
 
 #' @export
 hyperparam.set = function(n.param.vectors){
