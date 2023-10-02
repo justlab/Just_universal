@@ -111,6 +111,10 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL, n.frame = 1)
                          !identical(default.value[[1]], args[[pn]]))
                      next
                  args[[pn]] = NULL}
+        if (!length(args))
+          # If the list is empty, make sure it's a plain list, since
+          # empty named and plain lists hash differently.
+            args = list()
         key = list(args = args)
         hash = paste0("h", digest::digest(key, algo = "xxhash64"))
 
