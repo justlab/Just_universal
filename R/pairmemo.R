@@ -136,10 +136,11 @@ pairmemo = function(f, directory, mem = F, fst = F, ap = NULL, n.frame = 1)
             t2 = proc.time()
 
             dir.create(directory, showWarnings = FALSE)
-            if (fst)
-                fst::write.fst(v, path)
-            else
-                qs::qsave(v, file = path)
+            suppressPackageStartupMessages(
+                if (fst)
+                    fst::write.fst(v, path)
+                else
+                    qs::qsave(v, file = path))
             key = c(
                 list(
                     file_format = (if (fst) "fst" else "qs"),
@@ -246,7 +247,8 @@ pairmemo.clear = function(f, filter = function(x) TRUE)
     c("Cache entries deleted" = deleted)}
 
 pairmemo.read.call = function(is.fst, path)
-   {if (is.fst)
-        fst::read.fst(path, as.data.table = T)
-    else
-        qs::qread(path)}
+    suppressPackageStartupMessages(
+       {if (is.fst)
+            suppressPackageStartupMessages(fst::read.fst(path, as.data.table = T))
+        else
+            qs::qread(path)})
