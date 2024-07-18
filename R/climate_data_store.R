@@ -59,17 +59,17 @@ add.daily.var.from.climate.data.store = function(
         if (is.null(pbar))
             progress = F}
     d[, by = date, (vname.out) :=
-      # The data is grouped into one raster by year with one band per
-      # UTC hour. For each location, take the mean (or min, mean, and
-      # max, with `tri.output`) of all hours on the requested date in
-      # `target.tz`.
+      # The data is grouped into one raster per period (year or month)
+      # with one band per UTC hour. For each location, take the mean
+      # (or min, mean, and max, with `tri.output`) of all hours on the
+      # requested date in `target.tz`.
        {datetimes = lubridate::with_tz(tz = "UTC", lubridate::make_datetime(
             year(date), month(date), mday(date),
             hours, tz = target.tz))
         period.ixs = match(get.period(date), periods) + (-1 : 1)
-        values = do.call(cbind, lapply(period.ixs, function(period.ix)
           # We have to look at the previous and next period for
           # time-zone issues.
+        values = do.call(cbind, lapply(period.ixs, function(period.ix)
            {if (period.ix == 0)
                 return(NULL)
             r = rasts[[periods[period.ix]]]
