@@ -99,6 +99,7 @@ add.daily.var.from.climate.data.store = function(
     if (progress)
         close(pbar)}
 
+#' @export
 climate.data.store.file = function(
         the.year, the.month, area, vname.in, dataset,
         download.dir, download.filename.fmt)

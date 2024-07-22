@@ -3,6 +3,7 @@
 export(add.daily.var.from.climate.data.store)
 export(add.daily.var.from.merra2.gmi)
 export(assert)
+export(climate.data.store.file)
 export(convert.crs)
 export(crs.lonlat)
 export(crs.us.atlas)
