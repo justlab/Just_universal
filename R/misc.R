@@ -1,7 +1,7 @@
 .datatable.aware = TRUE
 
 #' @export
-assert = stopifnot
+assert = \(...) stopifnot(...)
 
 #' @export
 punl = function(...)
