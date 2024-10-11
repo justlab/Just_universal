@@ -4,7 +4,7 @@
 # (e.g., a single hour) for each date.
 #
 # Variable names and descriptions for one dataset can be found at
-# https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=overview
+# https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview
 
 #' @export
 add.daily.var.from.climate.data.store = function(
@@ -43,10 +43,16 @@ add.daily.var.from.climate.data.store = function(
         else
            {the.year = as.integer(p)
             the.month = NULL}
-        terra::rast(climate.data.store.file(
+        r = terra::rast(climate.data.store.file(
             the.year, the.month,
             area, vname.in, dataset,
-            download.dir, download.filename.fmt))}))
+            download.dir, download.filename.fmt))
+        t1 = lubridate::make_datetime(the.year)
+        t2 = t1 +
+            lubridate::period(1, (if (monthly) "month" else "year")) -
+            lubridate::hours(1)
+        terra::time(r) = seq(t1, t2, by = "hour")
+        r}))
 
     message("Finding cells")
     d[, cds.cell.ix := terra::cellFromXY(
@@ -107,47 +113,52 @@ climate.data.store.file = function(
         if (!is.null(the.month)) the.month))
     fpath = file.path(download.dir, fname)
     if (!file.exists(fpath))
-       {message(sprintf("Downloading %s-%s %s from Climate Data Store.",
+       {message(sprintf("Getting %s-%s %s from Climate Data Store",
             the.year,
             (if (is.null(the.month)) "all-months" else the.month),
             vname.in))
-        message("    (This may take a while.)")
-        reply = jsonlite::fromJSON(system2("curl", stdout = T, shQuote(c(
-            paste0("https://cds.climate.copernicus.eu/api/v2/resources/",
-                dataset),
-            "--fail",
-            "--user-agent", "some-program",
-            climate.data.store.creds(),
-            "-d", jsonlite::toJSON(auto_unbox = T, digits = NA, c(
-                list(
-                    year = the.year,
-                    month = (if (is.null(the.month)) 1 : 12 else the.month),
-                    day = 1 : 31,
-                    time = sprintf("%02d:00", 0 : 23),
-                    format = "netcdf",
-                    product_type = "reanalysis",
-                    variable = vname.in,
-                    area = area),
-                if (dataset == "reanalysis-era5-single-levels")
-                    list(grid = c(0.125, 0.125))))))))
-        while (reply$state %in% c("queued", "running"))
-           {Sys.sleep(15)
-            reply = jsonlite::fromJSON(system2("curl", stdout = T, shQuote(c(
-                paste0("https://cds.climate.copernicus.eu/api/v2/tasks/",
-                    reply$request_id),
+        req = \(url.suffix.fmt, id, inputs = NULL)
+            jsonlite::fromJSON(system2("curl", stdout = T, shQuote(c(
+                paste0("https://cds.climate.copernicus.eu/api/retrieve/v1/",
+                    sprintf(url.suffix.fmt, id)),
                 "--fail",
+                "--no-progress-meter",
                 "--user-agent", "some-program",
-                climate.data.store.creds()))))}
-        stopifnot(is.character(reply$location))
-        download.update.meta(
-            reply$location,
-            download.dir,
-            fname,
-            curl = climate.data.store.creds())}
+                climate.data.store.creds(),
+                if (!is.null(inputs)) c(
+                    "-H", "Content-Type: application/json",
+                    "--data-raw", jsonlite::toJSON(
+                        auto_unbox = T,
+                        digits = NA,
+                        list(inputs = inputs)))))))
+        reply = req("processes/%s/execution", dataset, c(
+            list(
+                year = the.year,
+                month = (if (is.null(the.month)) 1 : 12 else the.month),
+                day = 1 : 31,
+                time = sprintf("%02d:00", 0 : 23),
+                format = "netcdf",
+                product_type = "reanalysis",
+                variable = vname.in,
+                area = area),
+            if (dataset == "reanalysis-era5-single-levels")
+                list(grid = c(0.125, 0.125))))
+        assert(reply$status == "accepted")
+        job = reply$jobID
+        message("Waiting for CDS to generate the file (this may take a while)")
+        while (reply$status %in% c("accepted", "running"))
+           {Sys.sleep(15)
+            reply = req("jobs/%s", job)}
+        assert(reply$status == "successful")
+        reply = req("jobs/%s/results", job)
+        url = reply$asset$value$href
+        assert(is.character(url))
+        message("Downloading")
+        download.update.meta(url, download.dir, fname)}
     fpath}
 
 climate.data.store.creds = function()
    {cred = Sys.getenv(names = F, "CLIMATE_DATA_STORE_KEY")
     if (cred == "")
-        stop("You need to set the environment variable CLIMATE_DATA_STORE_KEY. See https://cds.climate.copernicus.eu/api-how-to#install-the-cds-api-key .")
-    c("--user", cred)}
+        stop("You need to set the environment variable CLIMATE_DATA_STORE_KEY. See https://cds.climate.copernicus.eu/how-to-api#install-the-cds-api-token . You may also need to accept some kind of terms of use for each dataset; see e.g. https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=download")
+    c("-H", paste("PRIVATE-TOKEN:", cred))}
