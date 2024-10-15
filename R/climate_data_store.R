@@ -118,19 +118,28 @@ climate.data.store.file = function(
             (if (is.null(the.month)) "all-months" else the.month),
             vname.in))
         req = \(url.suffix.fmt, id, inputs = NULL)
-            jsonlite::fromJSON(system2("curl", stdout = T, shQuote(c(
-                paste0("https://cds.climate.copernicus.eu/api/retrieve/v1/",
-                    sprintf(url.suffix.fmt, id)),
-                "--fail",
-                "--no-progress-meter",
-                "--user-agent", "some-program",
-                climate.data.store.creds(),
-                if (!is.null(inputs)) c(
-                    "-H", "Content-Type: application/json",
-                    "--data-raw", jsonlite::toJSON(
-                        auto_unbox = T,
-                        digits = NA,
-                        list(inputs = inputs)))))))
+           {while (T)
+               {reply = system2("curl", stdout = T, shQuote(c(
+                    paste0("https://cds.climate.copernicus.eu/api/retrieve/v1/",
+                        sprintf(url.suffix.fmt, id)),
+                    "--fail",
+                    "--no-progress-meter",
+                    "--user-agent", "some-program",
+                    climate.data.store.creds(),
+                    if (!is.null(inputs)) c(
+                        "-H", "Content-Type: application/json",
+                        "--data-raw", jsonlite::toJSON(
+                            auto_unbox = T,
+                            digits = NA,
+                            list(inputs = inputs))))))
+                if (is.null(attr(reply, "status")))
+                  # R doesn't set the `status` attribute if the exit
+                  # status was 0, so this is a success.
+                    break
+                else
+                  # This should be a recoverable hiccup.
+                    Sys.sleep(15)}
+            jsonlite::fromJSON(reply)}
         reply = req("processes/%s/execution", dataset, c(
             list(
                 year = the.year,
