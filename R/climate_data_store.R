@@ -109,6 +109,7 @@ add.daily.var.from.climate.data.store = function(
 climate.data.store.file = function(
         the.year, the.month, area, vname.in, dataset,
         download.dir, download.filename.fmt)
+# The file format is GRIB.
    {fname = do.call(sprintf, c(list(download.filename.fmt, the.year),
         if (!is.null(the.month)) the.month))
     fpath = file.path(download.dir, fname)
@@ -146,7 +147,6 @@ climate.data.store.file = function(
                 month = (if (is.null(the.month)) 1 : 12 else the.month),
                 day = 1 : 31,
                 time = sprintf("%02d:00", 0 : 23),
-                format = "netcdf",
                 product_type = "reanalysis",
                 variable = vname.in,
                 area = area),
