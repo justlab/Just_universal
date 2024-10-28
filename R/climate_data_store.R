@@ -51,7 +51,14 @@ add.daily.var.from.climate.data.store = function(
         t2 = t1 +
             lubridate::period(1, (if (monthly) "month" else "year")) -
             lubridate::hours(1)
-        terra::time(r) = seq(t1, t2, by = "hour")
+        times = seq(t1, t2, by = "hour")
+        terra::time(r) =
+           (if (the.year == year(Sys.time()))
+              # We probably got an incomplete file, so allow using only a
+              # prefix of `times`.
+                times[seq_len(terra::nlyr(r))]
+            else
+                times)
         r}))
 
     message("Finding cells")
