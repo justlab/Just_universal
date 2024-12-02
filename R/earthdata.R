@@ -55,6 +55,14 @@ get.earthdata = function(root.dir, product, satellites, tiles, dates)
     # Download one file at a time.
     if (!all(file.exists(files$path)))
        {message("Downloading ", product, " from Earthdata")
+        curl.args = c(
+            "--silent", "--show-error", "--fail",
+            "--retry", 10,
+            "--retry-connrefused", "--ipv4",
+              # Forcing IPv4 may be necessary to get
+              # `--retry-connrefused` to work:
+              # https://github.com/curl/curl/issues/5080
+            earthdata.creds())
         pbapply::pboptions(type = "timer")
         pbapply::pblapply(which(!file.exists(files$path)), function(fi) with(files[fi],
 
@@ -65,10 +73,8 @@ get.earthdata = function(root.dir, product, satellites, tiles, dates)
             k = as.character(date)
             if (!(k %in% names(earthdata_web_dir_cache)))
                {r = suppressWarnings(system2("curl",
-                    stdout = T, stderr = T, shQuote(c(
-                        dir.url,
-                        "--silent", "--show-error", "--fail",
-                        earthdata.creds()))))
+                    stdout = T, stderr = T,
+                    shQuote(c(dir.url, curl.args))))
                 if (attr(r, "status") == 22L && all(str_detect(r, "404 Not Found")))
                   # This date has no directory, because it has no
                   # data.
@@ -88,10 +94,9 @@ get.earthdata = function(root.dir, product, satellites, tiles, dates)
                 # Download the file.
                 assert(0 == system2("curl", shQuote(c(
                     paste0(dir.url, "/", remote.name),
-                    "--silent", "--show-error", "--fail", "--remote-time",
-                    "--retry", 10,
+                    "--remote-time",
                     "--output", path,
-                    earthdata.creds()))))
+                    curl.args))))
             else if (length(remote.name) == 0)
                 # Make a stub.
                 cat("", file = path)
