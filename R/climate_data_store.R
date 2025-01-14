@@ -170,7 +170,7 @@ climate.data.store.file = function(
         url = reply$asset$value$href
         assert(is.character(url))
         message("Downloading")
-        download.update.meta(url, download.dir, fname)}
+        download.once(url, file.path(download.dir, fname))}
     fpath}
 
 climate.data.store.creds = function()
