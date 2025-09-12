@@ -170,7 +170,18 @@ climate.data.store.file = function(
         url = reply$asset$value$href
         assert(is.character(url))
         message("Downloading")
-        download.once(url, file.path(download.dir, fname))}
+        temp.path = tempfile()
+        download.once(url, temp.path)
+        dir.create(dirname(fpath), showWarnings = F, recursive = T)
+        if (tryCatch({unzip(temp.path, list = T); T}, error = \(e) F))
+          # We got a ZIP file.
+           {message("Decompressing")
+            on.exit(unlink(temp.path))
+            unzip(temp.path, "data.grib", exdir = tempdir())
+            file.rename(file.path(tempdir(), "data.grib"), fpath)}
+        else
+          # We got the GRIB file directly.
+            file.rename(temp.path, fpath)}
     fpath}
 
 climate.data.store.creds = function()
