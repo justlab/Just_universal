@@ -1,10 +1,10 @@
-if (!exists("earthdata_web_dir_cache"))
-    earthdata_web_dir_cache  = new.env(parent = emptyenv())
+if (!exists("earthdata.urls.cache"))
+    earthdata.urls.cache = new.env(parent = emptyenv())
 
 #' @export
-get.earthdata = function(root.dir, product, satellites, tiles, dates)
-  # Download the requested Earthdata satellite product (as an HDF
-  # file) for the Cartesian product of the specified satellites,
+get.earthdata = function(root.dir, products, satellites, tiles, dates)
+  # Download the requested Earthdata satellite products (as an HDF
+  # file) for the Cartesian product of the specified products, satellites,
   # tiles, and dates. For monthly products, round down dates to the
   # 1st of the month. If a file already exists locally, it isn't
   # re-downloaded.
@@ -17,44 +17,49 @@ get.earthdata = function(root.dir, product, satellites, tiles, dates)
 
    {# Check and normalize arguments.
     assert(dir.exists(root.dir))
-    assert(length(product) == 1)
-    assert(product %in% c(
-        "MCD19A2.006", "MCD19A2.061",
-        "MCD19A3D.061", "MxD13A3.061",
-        "MxD21A1D.061", "MxD21A1N.061"))
-    monthly = product == "MxD13A3.061"
+    assert(products %in% c("MxD13A3_061", "MxD21A1D_061", "MxD21A1N_061"))
+    monthly = products == "MxD13A3_061"
     if (monthly)
         dates = lubridate::floor_date(dates, "month")
-    for (vname in c("satellites", "tiles", "dates"))
+    assert(all(satellites %in% c("terra", "aqua")))
+    for (vname in c("products", "satellites", "tiles", "dates"))
         assign(vname, unique(get(vname)))
-    assert(all(satellites %in% (if (startsWith(product, "MCD"))
-        "terra.and.aqua" else
-        c("terra", "aqua"))))
     assert(all(str_detect(tiles, "\\Ah[0-9][0-9]v[0-9][0-9]\\z")))
-
-    # Set the URL format.
-    dir.url.f = function(d) with(d, sprintf(
-        "https://e4ftl01.cr.usgs.gov/%s/%s/%04d.%02d.%02d",
-        (if (startsWith(product, "MCD"))
-            "MOTA" else
-            paste0("MOL", toupper(substr(satellite, 1, 1)))),
-        str_replace(product, "x", switch(paste(satellite),
-            terra = "O",
-            aqua = "Y",
-            "")),
-        year(date), month(date), mday(date)))
 
     # Enumerate the files to be downloaded.
     files = data.table::CJ(
+        product = factor(products),
         satellite = factor(satellites),
         date = dates,
         tile = factor(tiles))
+    files[, real.product := str_replace(product, "x",
+        ifelse(as.character(satellite) == "terra", "O",
+        ifelse(as.character(satellite) == "aqua", "Y",
+        "")))]
     files[, path := file.path(root.dir,
-        product, satellite, year(date), tile, paste0(date, ".hdf"))]
+        real.product, year(date), tile, paste0(date, ".hdf"))]
 
     # Download one file at a time.
     if (!all(file.exists(files$path)))
-       {message("Downloading ", product, " from Earthdata")
+       {# Get applicable URLs.
+        d = files[!file.exists(path)]
+        yps = unique(d[, .(the.year = year(date), product = real.product)])
+        d = merge(
+            d,
+            rbindlist(lapply(1 : nrow(yps), \(i) cbind(
+                real.product = yps[i, product],
+                do.call(earthdata.urls, yps[i])))),
+            by = c("real.product", "date", "tile"),
+            all.x = T)
+        # Use only the alphabetically first URL per product-day-tile.
+        # This rule is arbitrary, but we gotta pick somehow.
+        d = d[order(url), by = .(real.product, date, tile), head(.SD, 1)]
+
+        message(sprintf("Downloading from Earthdata: %s in %s .. %s (n = %s)",
+            paste(unique(d$real.product), collapse = ", "),
+            min(d$date),
+            max(d$date),
+            comma(nrow(d))))
         curl.args = c(
             "--silent", "--show-error", "--fail",
             "--retry", 10,
@@ -64,47 +69,69 @@ get.earthdata = function(root.dir, product, satellites, tiles, dates)
               # https://github.com/curl/curl/issues/5080
             earthdata.creds())
         pbapply::pboptions(type = "timer")
-        pbapply::pblapply(which(!file.exists(files$path)), function(fi) with(files[fi],
+        pbapply::pbwalk(1 : nrow(d), \(di)
 
-           {dir.url = dir.url.f(files[fi])
-
-            # Get the remote filename by scraping the web page that
-            # lists it.
-            k = as.character(date)
-            if (!(k %in% names(earthdata_web_dir_cache)))
-               {r = suppressWarnings(system2("curl",
-                    stdout = T, stderr = T,
-                    shQuote(c(dir.url, curl.args))))
-                if (attr(r, "status") == 22L && all(str_detect(r, "404 Not Found")))
-                  # This date has no directory, because it has no
-                  # data.
-                     earthdata_web_dir_cache[[k]] = "nothing"
-                else
-                    {assert(is.null(attr(r, "status")))
-                     earthdata_web_dir_cache[[k]] = str_match_all(
-                         paste(r, collapse = ""),
-                         '<a href="([^"]+\\.hdf)"')[[1]][,2]}}
-            remote.name = (if (identical(earthdata_web_dir_cache[[k]], "nothing"))
-                character() else
-                str_subset(earthdata_web_dir_cache[[k]],
-                    as.character(tile)))
-
-            dir.create(dirname(path), showWarnings = F, recursive = T)
-            if (length(remote.name) == 1)
+           {dir.create(dirname(d[di, path]), showWarnings = F, recursive = T)
+            if (!is.na(d[di, url]))
                 # Download the file.
                 assert(0 == system2("curl", shQuote(c(
-                    paste0(dir.url, "/", remote.name),
+                    d[di, url],
                     "--remote-time",
-                    "--output", path,
+                    "--output", d[di, path],
                     curl.args))))
-            else if (length(remote.name) == 0)
-                # Make a stub.
-                cat("", file = path)
             else
-                stop()
-            NULL}))}
+                # Make a stub.
+                cat("", file = d[di, path])})}
 
-    files}
+    files[, real.product := NULL][]}
+
+earthdata.urls = function(the.year, product)
+# Use the SpatioTemporal Asset Catalog (STAC) interface to get the URL
+# of every Earthdata file we want and the corresponding date.
+   {k = paste(the.year, product)
+    if (k %in% names(earthdata.urls.cache))
+        return(earthdata.urls.cache[[k]])
+
+    base.url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/search"
+    max.good.limit = 100
+
+    message("Fetching Earthdata URLs: ", product)
+    out = list()
+    progress = NULL
+    r = httr::GET(base.url, query = list(
+        collections = product,
+        limit = max.good.limit,
+        bbox = I(with(as.list(st_bbox(study.area.lonlat())),
+            paste(sep = ",", xmin, ymin, xmax, ymax))),
+        datetime = I(sprintf("%d-01-01T00:00:00Z/%d-12-31T23:59:59Z",
+            the.year, the.year))))
+    repeat
+       {httr::stop_for_status(r)
+        r = jsonlite::fromJSON(httr::content(r, "text"), simplifyVector = F)
+        if (is.null(progress))
+           {progress = pbapply::startpb(max =
+                ceiling(r$context$matched / max.good.limit) - 1)
+            progress.i = 0}
+        else
+            pbapply::setpb(progress, (progress.i <- progress.i + 1))
+        out = c(out, lapply(r$features, \(item) list(
+            date = as.Date(item$properties$datetime),
+            tile = factor(
+                str_match(item$id, "h[0-9][0-9]v[0-9][0-9]"),
+                levels = levels(satellite.tiles)),
+            url = unlist(lapply(item$assets, \(x)
+               if (x$title == "Direct Download")
+                   x$href)))))
+        if (length(out) >= r$context$matched)
+           {close(progress)
+            break}
+        l = r$links[[length(r$links)]]
+        assert(l$rel == "next")
+        r = httr::GET(l$href)}
+
+    out = rbindlist(out)[!is.na(tile)]
+    assert(!anyNA(out))
+    earthdata.urls.cache[[k]] = setkey(out, date, tile, url)}
 
 #' @export
 earthdata.creds = function()
