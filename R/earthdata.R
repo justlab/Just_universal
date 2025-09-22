@@ -2,7 +2,7 @@ if (!exists("earthdata.urls.cache"))
     earthdata.urls.cache = new.env(parent = emptyenv())
 
 #' @export
-get.earthdata = function(root.dir, products, satellites, tiles, dates)
+get.earthdata = function(root.dir, bbox, products, satellites, tiles, dates)
   # Download the requested Earthdata satellite products (as an HDF
   # file) for the Cartesian product of the specified products, satellites,
   # tiles, and dates. For monthly products, round down dates to the
@@ -17,6 +17,8 @@ get.earthdata = function(root.dir, products, satellites, tiles, dates)
 
    {# Check and normalize arguments.
     assert(dir.exists(root.dir))
+    assert("bbox" %in% class(bbox))
+    assert(sf::st_crs(bbox) == sf::st_crs(crs.lonlat))
     assert(products %in% c("MxD13A3_061", "MxD21A1D_061", "MxD21A1N_061"))
     monthly = products == "MxD13A3_061"
     if (monthly)
@@ -46,9 +48,8 @@ get.earthdata = function(root.dir, products, satellites, tiles, dates)
         yps = unique(d[, .(the.year = year(date), product = real.product)])
         d = merge(
             d,
-            rbindlist(lapply(1 : nrow(yps), \(i) cbind(
-                real.product = yps[i, product],
-                do.call(earthdata.urls, yps[i])))),
+            rbindlist(lapply(1 : nrow(yps), \(i)
+                earthdata.urls(yps[i, the.year], yps[i, product], bbox))),
             by = c("real.product", "date", "tile"),
             all.x = T)
         # Use only the alphabetically first URL per product-day-tile.
@@ -85,10 +86,13 @@ get.earthdata = function(root.dir, products, satellites, tiles, dates)
 
     files[, real.product := NULL][]}
 
-earthdata.urls = function(the.year, product)
+earthdata.urls = function(the.year, product, bbox)
 # Use the SpatioTemporal Asset Catalog (STAC) interface to get the URL
 # of every Earthdata file we want and the corresponding date.
-   {k = paste(the.year, product)
+   {bbox = with(as.list(bbox),
+        paste(sep = ",", xmin, ymin, xmax, ymax))
+
+    k = paste(the.year, product, bbox)
     if (k %in% names(earthdata.urls.cache))
         return(earthdata.urls.cache[[k]])
 
@@ -101,8 +105,7 @@ earthdata.urls = function(the.year, product)
     r = httr::GET(base.url, query = list(
         collections = product,
         limit = max.good.limit,
-        bbox = I(with(as.list(st_bbox(study.area.lonlat())),
-            paste(sep = ",", xmin, ymin, xmax, ymax))),
+        bbox = I(bbox),
         datetime = I(sprintf("%d-01-01T00:00:00Z/%d-12-31T23:59:59Z",
             the.year, the.year))))
     repeat
@@ -115,10 +118,9 @@ earthdata.urls = function(the.year, product)
         else
             pbapply::setpb(progress, (progress.i <- progress.i + 1))
         out = c(out, lapply(r$features, \(item) list(
+            real.product = product,
             date = as.Date(item$properties$datetime),
-            tile = factor(
-                str_match(item$id, "h[0-9][0-9]v[0-9][0-9]"),
-                levels = levels(satellite.tiles)),
+            tile = factor(str_match(item$id, "h[0-9][0-9]v[0-9][0-9]")),
             url = unlist(lapply(item$assets, \(x)
                if (x$title == "Direct Download")
                    x$href)))))
@@ -129,9 +131,9 @@ earthdata.urls = function(the.year, product)
         assert(l$rel == "next")
         r = httr::GET(l$href)}
 
-    out = rbindlist(out)[!is.na(tile)]
+    out = rbindlist(out)
     assert(!anyNA(out))
-    earthdata.urls.cache[[k]] = setkey(out, date, tile, url)}
+    earthdata.urls.cache[[k]] = setkey(out, real.product, date, tile, url)}
 
 #' @export
 earthdata.creds = function()
