@@ -21,6 +21,7 @@ get.earthdata = function(root.dir, bbox, products, satellites, tiles, dates)
     assert(sf::st_crs(bbox) == sf::st_crs(crs.lonlat))
     assert(products %in% c("MxD13A3_061", "MxD21A1D_061", "MxD21A1N_061"))
     monthly = products == "MxD13A3_061"
+    provider = "LPCLOUD"
     if (monthly)
         dates = lubridate::floor_date(dates, "month")
     assert(all(satellites %in% c("terra", "aqua")))
@@ -48,8 +49,17 @@ get.earthdata = function(root.dir, bbox, products, satellites, tiles, dates)
         yps = unique(d[, .(the.year = year(date), product = real.product)])
         d = merge(
             d,
-            rbindlist(lapply(1 : nrow(yps), \(i)
-                earthdata.urls(yps[i, the.year], yps[i, product], bbox))),
+            rbindlist(lapply(1 : nrow(yps), \(i) `[`(
+                earthdata.urls(
+                    yps[i, the.year],
+                    provider,
+                    yps[i, product],
+                    bbox),
+                j = .(
+                    real.product = product,
+                    date = lubridate::as_date(time),
+                    tile,
+                    url)))),
             by = c("real.product", "date", "tile"),
             all.x = T)
         # Use only the alphabetically first URL per product-day-tile.
@@ -86,20 +96,24 @@ get.earthdata = function(root.dir, bbox, products, satellites, tiles, dates)
 
     files[, real.product := NULL][]}
 
-earthdata.urls = function(the.year, product, bbox)
+#' @export
+earthdata.urls = function(the.year, provider, product, bbox)
 # Use the SpatioTemporal Asset Catalog (STAC) interface to get the URL
-# of every Earthdata file we want and the corresponding date.
+# of every Earthdata file we want and the corresponding time.
+#
+# `bbox` must be in longitudes and latitudes.
    {bbox = with(as.list(bbox),
         paste(sep = ",", xmin, ymin, xmax, ymax))
 
-    k = paste(the.year, product, bbox)
+    k = paste(the.year, provider, product, bbox)
     if (k %in% names(earthdata.urls.cache))
         return(earthdata.urls.cache[[k]])
 
-    base.url = "https://cmr.earthdata.nasa.gov/stac/LPCLOUD/search"
+    base.url = sprintf("https://cmr.earthdata.nasa.gov/stac/%s/search",
+        provider)
     max.good.limit = 100
 
-    message("Fetching Earthdata URLs: ", product)
+    message(paste("Fetching Earthdata URLs:", the.year, provider, product))
     out = list()
     progress = NULL
     r = httr::GET(base.url, query = list(
@@ -118,12 +132,14 @@ earthdata.urls = function(the.year, product, bbox)
         else
             pbapply::setpb(progress, (progress.i <- progress.i + 1))
         out = c(out, lapply(r$features, \(item) list(
-            real.product = product,
-            date = as.Date(item$properties$datetime),
-            tile = factor(str_match(item$id, "h[0-9][0-9]v[0-9][0-9]")),
+            product = product,
+            time = lubridate::as_datetime(item$properties$datetime),
+            tile = factor(if (startsWith(product, "TEMPO_"))
+                "all" else
+                stringr::str_match(item$id, "h[0-9][0-9]v[0-9][0-9]")),
             url = unlist(lapply(item$assets, \(x)
-               if (x$title == "Direct Download")
-                   x$href)))))
+                if (x$title == "Direct Download")
+                    x$href)))))
         if (length(out) >= r$context$matched)
            {close(progress)
             break}
@@ -133,7 +149,7 @@ earthdata.urls = function(the.year, product, bbox)
 
     out = rbindlist(out)
     assert(!anyNA(out))
-    earthdata.urls.cache[[k]] = setkey(out, real.product, date, tile, url)}
+    earthdata.urls.cache[[k]] = setkey(out, product, time, tile, url)}
 
 #' @export
 earthdata.creds = function()
