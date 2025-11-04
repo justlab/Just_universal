@@ -19,12 +19,15 @@ get.earthdata = function(root.dir, bbox, products, satellites, tiles, dates)
     assert(dir.exists(root.dir))
     assert("bbox" %in% class(bbox))
     assert(sf::st_crs(bbox) == sf::st_crs(crs.lonlat))
-    assert(products %in% c("MxD13A3_061", "MxD21A1D_061", "MxD21A1N_061"))
-    monthly = products == "MxD13A3_061"
+    assert(products %in% c(
+        "MxD13A3_061", "MxD21A1D_061", "MxD21A1N_061", "MCD19A2_061"))
+    monthly = all(products == "MxD13A3_061")
     provider = "LPCLOUD"
     if (monthly)
         dates = lubridate::floor_date(dates, "month")
-    assert(all(satellites %in% c("terra", "aqua")))
+    assert(satellites %in% if (all(products == "MCD19A2_061"))
+        "terra.and.aqua" else
+        c("terra", "aqua"))
     for (vname in c("products", "satellites", "tiles", "dates"))
         assign(vname, unique(get(vname)))
     assert(all(str_detect(tiles, "\\Ah[0-9][0-9]v[0-9][0-9]\\z")))
