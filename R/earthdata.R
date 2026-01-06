@@ -20,9 +20,12 @@ get.earthdata = function(root.dir, bbox, products, satellites, tiles, dates)
     assert("bbox" %in% class(bbox))
     assert(sf::st_crs(bbox) == sf::st_crs(crs.lonlat))
     assert(products %in% c(
-        "MxD13A3_061", "MxD21A1D_061", "MxD21A1N_061", "MCD19A2_061"))
+        "MxD13A3_061", "MxD21A1D_061", "MxD21A1N_061", "MCD19A2_061",
+        "MxD10A1F_61"))
     monthly = all(products == "MxD13A3_061")
-    provider = "LPCLOUD"
+    provider = \(product) (if (str_detect(product, "\\AM.D10A1F_61\\z"))
+        "NSIDC_CPRD"
+        else "LPCLOUD")
     if (monthly)
         dates = lubridate::floor_date(dates, "month")
     assert(satellites %in% if (all(products == "MCD19A2_061"))
@@ -55,7 +58,7 @@ get.earthdata = function(root.dir, bbox, products, satellites, tiles, dates)
             rbindlist(lapply(1 : nrow(yps), \(i) `[`(
                 earthdata.urls(
                     yps[i, the.year],
-                    provider,
+                    provider(yps[i, product]),
                     yps[i, product],
                     bbox),
                 j = .(
