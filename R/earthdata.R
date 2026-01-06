@@ -128,6 +128,8 @@ earthdata.urls = function(the.year, provider, product, bbox)
     repeat
        {httr::stop_for_status(r)
         r = jsonlite::fromJSON(httr::content(r, "text"), simplifyVector = F)
+        if (!r$context$matched)
+            stop("No search results from Earthdata STAC")
         if (is.null(progress))
            {progress = pbapply::startpb(max =
                 ceiling(r$context$matched / max.good.limit) - 1)
