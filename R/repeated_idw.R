@@ -46,40 +46,52 @@ repeated.idw.tables = function(
     tables}
 
 #' @export
-repeated.idw = function(tables, li, group, outcome,
-        make.prediction = T, fallback = NA_real_,
-        n.workers = 1L)
+#' @export
+repeated.idw = \(
+        tables, li, group, outcome,
+        make.prediction = T, fallback = NA_real_, return.ws = F,
+        n.workers = 1L, progress = F)
    {d = data.table::data.table(li, group, outcome, make.prediction)
     if (nrow(d[!is.na(outcome), by = .(li, group), if (.N > 1) 1]))
         stop("repeated.idw: Detected more than one non-NA value for a single (li, group) pair")
     si = attr(tables, "si")
 
     d[, dix := .I]
-    f = (if (n.workers > 1L)
-        function(...) parallel::mclapply(mc.cores = n.workers, ...) else
-        lapply)
+    f = (
+        if (progress)
+           \(...) pbapply::pblapply(cl = n.workers, ...)
+        else if (n.workers > 1L)
+           \(...) parallel::mclapply(mc.cores = n.workers, ...)
+        else
+            lapply)
 
-    d = rbindlist(f(split(by = "group", d), function(chunk)
-       chunk[, .(dix, prediction = if (!any(make.prediction)) NA_real_ else
+    d = rbindlist(f(split(by = "group", d), \(chunk)
+       chunk[, cbind(dix, if (!any(make.prediction)) data.table(ws = NA_real_, prediction = NA_real_) else
            {s = rep(NA_real_, attr(tables, "ncol(source)"))
             lisi = attr(tables, "si")[li]
             nlisi = !is.na(lisi) & !is.na(outcome)
             s[lisi[nlisi]] = outcome[nlisi]
-            preds = rep(NA_real_, .N)
-            preds[make.prediction] = sapply(li[make.prediction], function(i)
-               {tab = tables[[i]]
+            ws = rep(NA_real_, .N)
+              # The sum of weights of observations used for the
+              # prediction.
+            prediction = rep(NA_real_, .N)
+            for (i in which(make.prediction))
+               {tab = tables[[li[i]]]
                 v = s[tab[, 1]]
                 nv = !is.na(v)
                 weights = tab[nv, 2]
-                if (length(weights))
+                ws[i] = sum(weights)
+                prediction[i] = (if (length(weights))
                    {if (Inf %in% weights)
                       # Treat the positively infinite weights as 1 and all
                       # others as 0.
                         mean(v[nv][weights == Inf])
                     else
-                        sum(v[nv] * weights) / sum(weights)}
+                        sum(v[nv] * weights) / ws[i]}
                 else
-                    fallback})
-            preds})]))
+                    fallback)}
+            data.table(ws, prediction)})]))
 
-    d$prediction[order(d$dix)]}
+    d[order(d$dix), (if (return.ws)
+        list(ws, prediction) else
+        prediction)]}
