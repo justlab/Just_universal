@@ -1,7 +1,7 @@
 # Get a variable from the Climate Data Store and compute the daily
-# mean (or the daily min, mean, and max) for each date and (lon, lat)
-# pair in a data table. Set `hours` to use only a subset of hours
-# (e.g., a single hour) for each date.
+# mean (or the daily sum, or the daily min, mean, and max) for each
+# date and (lon, lat) pair in a data table. Set `hours` to use only a
+# subset of hours (e.g., a single hour) for each date.
 #
 # Variable names and descriptions for one dataset can be found at
 # https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview
@@ -10,6 +10,7 @@
 add.daily.var.from.climate.data.store = function(
         d, vname.in, dataset, vname.out,
         target.tz, area,
+        summary = "mean",
         download.dir, download.filename.fmt,
         hours = 0:23,
         monthly = F,
@@ -19,9 +20,10 @@ add.daily.var.from.climate.data.store = function(
         progress = F)
    {assert(all(c("lon", "lat", "date") %in% colnames(d)))
     assert(length(vname.out) %in% c(1, 3))
+    assert(summary %in% c("mean", "sum"))
     tri.output = length(vname.out) == 3
       # With `tri.output`, produce the min, mean, and max per day and
-      # location. Otherwise, produce only the mean.
+      # location. Otherwise, produce only the `summary`.
 
     message("Finding time periods")
     get.period = function(dates)
@@ -98,8 +100,12 @@ add.daily.var.from.climate.data.store = function(
             if (!is.null(values) && ncol(values) == length(hours))
                (if (tri.output)
                     list(apply(values, 1, min), rowMeans(values), apply(values, 1, max))
+                else if (summary == "mean")
+                    rowMeans(values)
+                else if (summary == "sum")
+                    rowSums(values)
                 else
-                    rowMeans(values))
+                    stop())
             else if (tri.output)
                 list(NA_real_, NA_real_, NA_real_)
             else
