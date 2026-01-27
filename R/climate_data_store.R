@@ -162,9 +162,7 @@ climate.data.store.file = function(
                 time = sprintf("%02d:00", 0 : 23),
                 product_type = "reanalysis",
                 variable = vname.in,
-                area = area),
-            if (dataset == "reanalysis-era5-single-levels")
-                list(grid = c(0.125, 0.125))))
+                area = area)))
         assert(reply$status == "accepted")
         job = reply$jobID
         message("Waiting for CDS to generate the file (this may take a while)")
