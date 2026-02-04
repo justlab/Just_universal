@@ -46,7 +46,6 @@ repeated.idw.tables = function(
     tables}
 
 #' @export
-#' @export
 repeated.idw = \(
         tables, li, group, outcome,
         make.prediction = T, fallback = NA_real_, return.ws = F,
