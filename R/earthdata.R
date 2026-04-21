@@ -21,16 +21,17 @@ get.earthdata = function(root.dir, bbox, products, satellites, tiles, dates)
     assert(sf::st_crs(bbox) == sf::st_crs(crs.lonlat))
     assert(products %in% c(
         "MxD13A3_061", "MxD21A1D_061", "MxD21A1N_061", "MCD19A2_061",
-        "MxD10A1F_61"))
+        "MxD10A1F_61", "Vxx19A2_002"))
     monthly = all(products == "MxD13A3_061")
     provider = \(product) (if (str_detect(product, "\\AM.D10A1F_61\\z"))
         "NSIDC_CPRD"
         else "LPCLOUD")
     if (monthly)
         dates = lubridate::floor_date(dates, "month")
-    assert(satellites %in% if (all(products == "MCD19A2_061"))
-        "terra.and.aqua" else
-        c("terra", "aqua"))
+    assert(satellites %in% (
+        if (all(products == "MCD19A2_061")) "terra.and.aqua"
+        else if (all(products == "Vxx19A2_002")) c("suomi", "noaa20")
+        else c("terra", "aqua")))
     for (vname in c("products", "satellites", "tiles", "dates"))
         assign(vname, unique(get(vname)))
     assert(all(str_detect(tiles, "\\Ah[0-9][0-9]v[0-9][0-9]\\z")))
@@ -41,10 +42,13 @@ get.earthdata = function(root.dir, bbox, products, satellites, tiles, dates)
         satellite = factor(satellites),
         date = dates,
         tile = factor(tiles))
-    files[, real.product := str_replace(product, "x",
-        ifelse(as.character(satellite) == "terra", "O",
-        ifelse(as.character(satellite) == "aqua", "Y",
-        "")))]
+    files[, real.product := ifelse(product == "Vxx19A2_002",
+        c(suomi = "VNP19A2_002", noaa20 = "VJ119A2_002")
+            [as.character(satellite)],
+        str_replace(product, "x",
+            ifelse(as.character(satellite) == "terra", "O",
+            ifelse(as.character(satellite) == "aqua", "Y",
+            ""))))]
     files[, path := file.path(root.dir,
         real.product, year(date), tile, paste0(date, ".hdf"))]
 
