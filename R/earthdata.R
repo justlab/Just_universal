@@ -80,7 +80,7 @@ get.earthdata = function(root.dir, bbox, products, satellites, tiles, dates)
             paste(unique(d$real.product), collapse = ", "),
             min(d$date),
             max(d$date),
-            comma(nrow(d))))
+            format(nrow(d), big.mark = ",")))
         curl.args = c(
             "--silent", "--show-error", "--fail",
             "--retry", 10,
