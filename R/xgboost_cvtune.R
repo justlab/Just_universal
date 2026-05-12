@@ -41,21 +41,20 @@ xgboost.dart.cvtune = function(
     design = hyperparam.set(n.param.vectors)
 
     fit = function(dslice, params, fast = F)
-        xgboost::xgboost(
-            verbose = 0,
-            params = c(
-                list(
-                    booster = "dart",
-                    objective = objective,
-                    eval_metric = eval_metric,
-                    one_drop = T),
-                xgboost.extra,
-                params),
-            data = as.matrix(dslice[, mget(ivs)]),
-            label = dslice[[dv]],
-            weight = (if (is.null(weight.v)) NULL else
-                dslice[[weight.v]]),
-            nrounds = n.rounds)
+        do.call(xgboost::xgboost, c(
+            list(
+                verbosity = 0,
+                booster = "dart",
+                objective = objective,
+                eval_metric = eval_metric,
+                one_drop = T,
+                x = as.matrix(dslice[, mget(ivs)]),
+                y = dslice[[dv]],
+                weight = (if (is.null(weight.v)) NULL else
+                    dslice[[weight.v]]),
+                nrounds = n.rounds),
+            xgboost.extra,
+            params))
 
     if (is.null(folds))
         folds = sample(rep(1 : n.folds, len = nrow(d)))
@@ -98,10 +97,10 @@ hyperparam.set = function(n.param.vectors){
     pow2 = function(x) 2^x
     ps = ParamHelpers::makeParamSet(
         # Based on autoxgboost's defaults.
-        Numeric("eta", lower = .01, upper = .5),
-        Numeric("gamma", lower = -7, upper = 6, trafo = pow2),
-        Numeric("lambda", lower = -10, upper = 10, trafo = pow2),
-        Numeric("alpha", lower = -10, upper = 10, trafo = pow2),
+        Numeric("learning_rate", lower = .01, upper = .5),
+        Numeric("min_split_loss", lower = -7, upper = 6, trafo = pow2),
+        Numeric("reg_lambda", lower = -10, upper = 10, trafo = pow2),
+        Numeric("reg_alpha", lower = -10, upper = 10, trafo = pow2),
         Discrete("max_depth", values = c(3, 6, 9)),
         Discrete("rate_drop", values = c(0, .01, .025, .05)))
     design = data.table::as.data.table(
