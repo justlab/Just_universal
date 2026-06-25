@@ -139,10 +139,8 @@ earthdata.urls = function(the.year, provider, product, bbox)
             stop("No search results from Earthdata STAC")
         if (is.null(progress))
            {progress = pbapply::startpb(max =
-                ceiling(r$context$matched / max.good.limit) - 1)
+                ceiling(r$context$matched / max.good.limit))
             progress.i = 0}
-        else
-            pbapply::setpb(progress, (progress.i <- progress.i + 1))
         out = c(out, lapply(r$features, \(item) list(
             product = product,
             time = lubridate::as_datetime(item$properties$datetime),
@@ -152,6 +150,7 @@ earthdata.urls = function(the.year, provider, product, bbox)
             url = unlist(lapply(item$assets, \(x)
                 if (x$title == "Direct Download")
                     x$href)))))
+        pbapply::setpb(progress, (progress.i <- progress.i + 1))
         if (length(out) >= r$context$matched)
            {close(progress)
             break}
