@@ -88,6 +88,8 @@ get.earthdata = function(root.dir, bbox, products, satellites, tiles, dates)
         curl.args = c(
             "--silent", "--show-error", "--fail",
             "--retry", 10,
+            "--retry-delay", 60,
+            "--retry-all-errors",
             "--retry-connrefused", "--ipv4",
               # Forcing IPv4 may be necessary to get
               # `--retry-connrefused` to work:
